@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { RightPanel, Sidebar, Topbar } from "@/src/components/dashboard/layout";
+import { Sidebar, Topbar } from "@/src/components/dashboard/layout";
 
 export default function DashboardLayout({
   children,
@@ -8,25 +8,21 @@ export default function DashboardLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="h-screen overflow-hidden bg-white text-zinc-900 dark:bg-[#09090B] dark:text-white">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#ECE9E6] text-zinc-900 dark:bg-[#09090B] dark:text-white">
       {/* Background Glow */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-orange-500/10 dark:bg-orange-500/10 blur-[180px]" />
-        <div className="absolute bottom-0 right-0 h-[350px] w-[350px] rounded-full bg-orange-500/5 blur-[160px]" />
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-orange-500/10 blur-[180px]" />
+        <div className="absolute bottom-0 left-0 h-[380px] w-[380px] rounded-full bg-orange-300/20 blur-[160px] dark:bg-orange-500/5" />
       </div>
 
-      <div className="grid h-screen grid-cols-[280px_1fr_360px]">
+      <Topbar />
+
+      <div className="flex min-h-0 flex-1">
         <Sidebar />
 
-        <main className="flex min-w-0 flex-col overflow-hidden border-x border-black/5 dark:border-white/5">
-          <Topbar />
-
-          <div className="flex-1 overflow-y-auto overscroll-contain no-scrollbar p-8">
-            {children}
-          </div>
+        <main className="min-w-0 flex-1 overflow-y-auto overscroll-contain no-scrollbar pb-6 pl-2 pr-6">
+          {children}
         </main>
-
-        <RightPanel />
       </div>
     </div>
   );
