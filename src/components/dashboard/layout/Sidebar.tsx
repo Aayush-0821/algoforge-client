@@ -2,63 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { LogOut } from "lucide-react";
 
-import GlassCard from "../../ui/glass-card";
 import { cn } from "@/lib/utils";
 import { navigation } from "./navigation";
-import { getProfile, type ProfileResponse } from "@/src/lib/api/profile";
+
+function RailTooltip({ label }: { label: string }) {
+  return (
+    <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 dark:bg-white dark:text-zinc-900">
+      {label}
+    </span>
+  );
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
 
-  const [profile, setProfile] = useState<ProfileResponse | null>(null);
-
-  useEffect(() => {
-    async function loadProfile() {
-      try {
-        const data = await getProfile();
-        setProfile(data);
-      } catch (error) {
-        console.error("Failed to load profile:", error);
-      }
-    }
-
-    loadProfile();
-  }, []);
-
-  const displayName = profile?.profile.displayName || "User";
-
-  const initials = displayName
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   return (
-    <aside className="flex h-screen flex-col border-r border-black/5 bg-white/90 px-5 py-6 backdrop-blur-xl dark:border-white/5 dark:bg-[#09090B]/90">
-      {/* Logo */}
-      <Link href="/" className="mb-10 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-lg font-bold text-white shadow-lg shadow-orange-500/30">
-          AF
-        </div>
-
-        <div>
-          <h1 className="text-lg font-bold tracking-tight">
-            <span className="text-zinc-900 dark:text-white">Algo</span>
-            <span className="text-orange-500">Forge</span>
-          </h1>
-
-          <p className="text-xs text-zinc-500">
-            AI Interview Coach
-          </p>
-        </div>
-      </Link>
-
+    <aside className="flex w-24 shrink-0 flex-col items-center pb-6 pt-2">
       {/* Navigation */}
-      <nav className="flex-1 space-y-2">
+      <nav className="flex flex-1 flex-col items-center gap-3">
         {navigation.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
@@ -67,71 +30,36 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.title}
               className={cn(
-                "group relative flex items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-300",
+                "group relative flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200",
                 active
-                  ? "bg-orange-500/10 text-orange-400"
-                  : "text-zinc-600 hover:bg-black/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
+                  ? "bg-zinc-900 text-white shadow-lg shadow-black/20 dark:bg-orange-500 dark:shadow-orange-500/30"
+                  : "bg-white/70 text-zinc-500 shadow-sm hover:bg-white hover:text-zinc-900 dark:bg-white/5 dark:text-zinc-400 dark:shadow-none dark:hover:bg-white/10 dark:hover:text-white",
               )}
             >
-              {/* Active Indicator */}
-              {active && (
-                <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-orange-500" />
-              )}
-
-              <Icon className="h-5 w-5" />
-
-              <span className="flex-1 font-medium">
-                {item.title}
-              </span>
+              <Icon className="h-[18px] w-[18px]" />
 
               {item.premium && (
-                <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-400">
-                  PRO
-                </span>
+                <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#ECE9E6] bg-orange-500 dark:border-[#09090B]" />
               )}
 
-              {!item.premium && (
-                <ChevronRight className="h-4 w-4 opacity-0 transition group-hover:translate-x-1 group-hover:opacity-100" />
-              )}
+              <RailTooltip
+                label={item.premium ? `${item.title} · PRO` : item.title}
+              />
             </Link>
           );
         })}
       </nav>
 
-      {/* User Card */}
+      {/* Logout */}
       <Link
-        href="/profile"
-        className="group block rounded-2xl"
+        href="/"
+        aria-label="Log out"
+        className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-zinc-500 shadow-sm transition-all duration-200 hover:bg-white hover:text-orange-500 dark:bg-white/5 dark:text-zinc-400 dark:shadow-none dark:hover:bg-white/10"
       >
-        <GlassCard className="p-4 transition-colors group-hover:border-orange-500/30">
-          <div className="flex items-center gap-3">
-            {/* Avatar */}
-            {profile?.profile.avatarUrl ? (
-              <img
-                src={profile.profile.avatarUrl}
-                alt={displayName}
-                className="h-12 w-12 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-600 font-semibold text-white">
-                {initials}
-              </div>
-            )}
-
-            <div className="min-w-0 flex-1">
-              <h3 className="truncate font-medium text-zinc-900 dark:text-white">
-                {displayName}
-              </h3>
-
-              <p className="text-sm text-zinc-500">
-                Free Plan
-              </p>
-            </div>
-
-            <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" />
-          </div>
-        </GlassCard>
+        <LogOut className="h-[18px] w-[18px]" />
+        <RailTooltip label="Log out" />
       </Link>
     </aside>
   );
