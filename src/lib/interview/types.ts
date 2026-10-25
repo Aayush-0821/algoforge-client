@@ -14,7 +14,14 @@ export interface Company {
   topics: string[];
 }
 
+
 export interface Example {
+  input: string;
+  output: string;
+  explanation?: string;
+}
+
+export interface SampleTestCase {
   input: string;
   output: string;
   explanation?: string;
@@ -26,13 +33,26 @@ export interface CodingQuestion {
   title: string;
   difficulty: Difficulty;
   marks: number;
+
+  // Problem statement, preserving paragraph and line breaks.
   description: string[];
+
+  // Public illustrative examples.
   examples: Example[];
+
+  // Input/output format sections from the source question.
+  inputFormat?: string;
+  outputFormat?: string;
+
+  // Constraints and judge-provided sample cases.
   constraints: string[];
+  sampleTestCases?: SampleTestCase[];
+
   hints: string[];
   starter: Record<Language, string>;
   sampleInput: string;
 }
+
 
 export interface McqQuestion {
   id: string;

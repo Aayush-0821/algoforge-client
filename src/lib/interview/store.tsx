@@ -79,7 +79,9 @@ export function InterviewProvider({ children }: { children: ReactNode }) {
   const finish = useCallback(() => {
     setState((s) => (s.finishedAt ? s : { ...s, finishedAt: Date.now() }));
     setMedia((m) => {
-      Object.values(m).forEach((st) => st?.getTracks().forEach((t) => t.stop()));
+      Object.values(m).forEach((st) => {
+  st?.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+});
       return emptyMedia;
     });
   }, []);

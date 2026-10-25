@@ -1,7 +1,8 @@
+
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Camera, Globe, Laptop, Maximize, Mic, MonitorUp } from "lucide-react";
 import { getCompany } from "@/src/lib/interview/data";
 import { useInterview } from "@/src/lib/interview/store";
@@ -17,6 +18,10 @@ import {
   skyB,
   skyHero,
 } from "@/src/components/interview/theme";
+import {
+  getCompanyAssessments,
+  type CompanyAssessment,
+} from "@/src/lib/mockoa/api";
 
 interface Check {
   s: CheckStatus;
@@ -29,9 +34,16 @@ export default function SystemCheckPage({
   params: Promise<{ company: string }>;
 }) {
   const { company: slug } = use(params);
-  const company = getCompany(slug);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const assessmentId = searchParams.get("assessmentId");
+
+  const companyMeta = getCompany(slug);
   const { state, media, attach, start } = useInterview();
+
+  const [assessment, setAssessment] = useState<CompanyAssessment | null>(null);
+  const [assessmentLoading, setAssessmentLoading] = useState(true);
+  const [assessmentError, setAssessmentError] = useState("");
 
   const required = state.mode === "interview";
   const [browser, setBrowser] = useState<Check>({ s: "checking" });
@@ -43,84 +55,186 @@ export default function SystemCheckPage({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (!company || state.company !== slug) router.replace(`/interview/${slug}`);
-  }, [company, state.company, slug, router]);
+    let active = true;
+
+    async function loadAssessment() {
+      setAssessmentLoading(true);
+      setAssessmentError("");
+
+      if (!assessmentId) {
+        setAssessmentError(
+          "No assessment was selected. Return to the company page and choose an OA.",
+        );
+        setAssessmentLoading(false);
+        return;
+      }
+
+      try {
+        const result = await getCompanyAssessments(slug);
+        const selected = result.assessments.find(
+          (item) => item.id === assessmentId,
+        );
+
+        if (!selected) {
+          throw new Error(
+            "This assessment is unavailable or is no longer published.",
+          );
+        }
+
+        if (active) setAssessment(selected);
+      } catch (error) {
+        if (active) {
+          setAssessmentError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load the selected assessment.",
+          );
+        }
+      } finally {
+        if (active) setAssessmentLoading(false);
+      }
+    }
+
+    void loadAssessment();
+
+    return () => {
+      active = false;
+    };
+  }, [slug, assessmentId]);
 
   useEffect(() => {
-    const ok = !!navigator.mediaDevices && !!document.documentElement.requestFullscreen;
+    if (state.company !== slug) {
+      router.replace(`/interview/${slug}`);
+    }
+  }, [state.company, slug, router]);
+
+  useEffect(() => {
+    const ok =
+      !!navigator.mediaDevices &&
+      !!document.documentElement.requestFullscreen;
+
     setBrowser(
-      ok ? { s: "ok" } : { s: "error", msg: "Use a recent version of Chrome, Edge or Firefox." }
+      ok
+        ? { s: "ok" }
+        : {
+            s: "error",
+            msg: "Use a recent version of Chrome, Edge or Firefox.",
+          },
     );
-    const upd = () =>
-      setNetwork(navigator.onLine ? { s: "ok" } : { s: "error", msg: "You appear to be offline." });
-    upd();
-    window.addEventListener("online", upd);
-    window.addEventListener("offline", upd);
+
+    const updateNetwork = () =>
+      setNetwork(
+        navigator.onLine
+          ? { s: "ok" }
+          : { s: "error", msg: "You appear to be offline." },
+      );
+
+    updateNetwork();
+    window.addEventListener("online", updateNetwork);
+    window.addEventListener("offline", updateNetwork);
+
     return () => {
-      window.removeEventListener("online", upd);
-      window.removeEventListener("offline", upd);
+      window.removeEventListener("online", updateNetwork);
+      window.removeEventListener("offline", updateNetwork);
     };
   }, []);
 
   useEffect(() => {
-    if (videoRef.current) videoRef.current.srcObject = media.camera;
+    if (videoRef.current) {
+      videoRef.current.srcObject = media.camera;
+    }
   }, [media.camera]);
 
   useEffect(() => {
     if (!media.mic) return;
+
     const ctx = new AudioContext();
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
     ctx.createMediaStreamSource(media.mic).connect(analyser);
+
     const data = new Uint8Array(analyser.frequencyBinCount);
     let raf = 0;
+
     const loop = () => {
       analyser.getByteFrequencyData(data);
       const avg = data.reduce((a, b) => a + b, 0) / data.length;
+
       setLevel(Math.min(100, avg * 2.5));
       if (avg > 6) setMic({ s: "ok" });
+
       raf = requestAnimationFrame(loop);
     };
+
     loop();
+
     return () => {
       cancelAnimationFrame(raf);
-      ctx.close();
+      void ctx.close();
     };
   }, [media.mic]);
 
-  if (!company) return null;
-
   const testCamera = async () => {
     setCam({ s: "checking" });
+
     try {
-      attach("camera", await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } }));
+      attach(
+        "camera",
+        await navigator.mediaDevices.getUserMedia({
+          video: { width: 1280, height: 720 },
+        }),
+      );
       setCam({ s: "ok" });
     } catch {
-      setCam({ s: "error", msg: "Camera blocked. Allow access from the address bar and retry." });
+      setCam({
+        s: "error",
+        msg: "Camera blocked. Allow access from the address bar and retry.",
+      });
     }
   };
 
   const testMic = async () => {
     setMic({ s: "checking", msg: "Say something — the meter should move." });
+
     try {
       attach("mic", await navigator.mediaDevices.getUserMedia({ audio: true }));
     } catch {
-      setMic({ s: "error", msg: "Microphone blocked. Allow access and retry." });
+      setMic({
+        s: "error",
+        msg: "Microphone blocked. Allow access and retry.",
+      });
     }
   };
 
   const testScreen = async () => {
     setScr({ s: "checking" });
+
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+      });
       const track = stream.getVideoTracks()[0];
-      const surface = (track.getSettings() as MediaTrackSettings & { displaySurface?: string }).displaySurface;
+      const surface = (
+        track.getSettings() as MediaTrackSettings & {
+          displaySurface?: string;
+        }
+      ).displaySurface;
+
       if (required && surface && surface !== "monitor") {
-        stream.getTracks().forEach((t) => t.stop());
-        setScr({ s: "error", msg: "Please share your ENTIRE screen, not a window or a tab." });
+        stream.getTracks().forEach((item) => item.stop());
+        setScr({
+          s: "error",
+          msg: "Please share your ENTIRE screen, not a window or a tab.",
+        });
         return;
       }
-      track.onended = () => setScr({ s: "error", msg: "Screen sharing stopped. Share again to continue." });
+
+      track.onended = () =>
+        setScr({
+          s: "error",
+          msg: "Screen sharing stopped. Share again to continue.",
+        });
+
       attach("screen", stream);
       setScr({ s: "ok" });
     } catch {
@@ -130,52 +244,111 @@ export default function SystemCheckPage({
 
   const base = browser.s === "ok" && network.s === "ok";
   const devices = cam.s === "ok" && mic.s === "ok" && scr.s === "ok";
-  const canStart = base && (!required || devices);
+  const canStart =
+    base &&
+    (!required || devices) &&
+    !!assessment &&
+    !assessmentLoading &&
+    !assessmentError;
 
   const begin = async () => {
+    if (!assessment || !assessmentId || !canStart) return;
+
     try {
       await document.documentElement.requestFullscreen();
-    } catch {}
-    start(company.durationMins);
-    router.push(`/interview/${slug}/assessment`);
+    } catch {
+      // The browser may deny fullscreen; the checks below still govern access.
+    }
+
+    start(assessment.durationMinutes);
+
+    router.push(
+      `/interview/${slug}/assessment?assessmentId=${encodeURIComponent(
+        assessmentId,
+      )}`,
+    );
   };
+
+  const companyName =
+    companyMeta?.name ??
+    slug.replace(/[-_]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
   return (
     <div
       className={`${fontVars} min-h-screen bg-white px-3 py-3 sm:px-6 sm:py-6`}
       style={{ color: INK }}
     >
-      {/* header panel */}
       <section
         className="overflow-hidden rounded-[28px] px-5 py-10 sm:px-8 md:rounded-[44px] md:px-12 md:py-14"
         style={skyHero}
       >
         <div className="mx-auto max-w-6xl">
           <p className={`text-xs text-slate-800 ${fMono}`}>
-            {company.name} | {state.mode} mode
+            {companyName} | {state.mode} mode
           </p>
+
           <h1
             className={`mt-4 text-[52px] leading-[1] tracking-[-0.015em] md:text-[84px] ${fSerif}`}
           >
             System <em>check</em>
           </h1>
-          <p className="mt-5 max-w-xl text-[15px] leading-7 text-slate-800">
-            {required
-              ? "All checks below are required before the assessment can begin."
-              : "Device checks are optional in practice mode, but recommended."}
-          </p>
+
+          {assessmentLoading ? (
+            <p className="mt-5 text-sm text-slate-700">
+              Loading your selected assessment…
+            </p>
+          ) : assessmentError ? (
+            <div role="alert" className="mt-5 max-w-2xl">
+              <p className="text-sm leading-6 text-red-800">
+                {assessmentError}
+              </p>
+              <button
+                type="button"
+                onClick={() => router.replace(`/interview/${slug}`)}
+                className="mt-3 text-sm font-semibold underline"
+              >
+                Choose an assessment
+              </button>
+            </div>
+          ) : assessment ? (
+            <>
+              <p className={`mt-5 text-xs text-slate-700 ${fMono}`}>
+                SELECTED OA
+              </p>
+              <h2 className={`mt-1 text-3xl ${fSerif}`}>
+                {assessment.title}
+              </h2>
+              <p className="mt-3 max-w-xl text-[15px] leading-7 text-slate-800">
+                {required
+                  ? "All checks below are required before the assessment can begin."
+                  : "Device checks are optional in practice mode, but recommended."}
+              </p>
+            </>
+          ) : null}
         </div>
       </section>
 
-      {/* checks panel */}
       <section
         className="mt-4 overflow-hidden rounded-[28px] px-5 py-10 sm:px-8 md:rounded-[44px] md:px-12 md:py-14"
         style={skyB}
       >
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-5 md:grid-cols-2">
-            <DeviceCheckCard icon={Laptop} title="Browser" description="Fullscreen and media APIs supported." status={browser.s} message={browser.msg} />
-            <DeviceCheckCard icon={Globe} title="Internet" description="Stable connection required." status={network.s} message={network.msg} />
+            <DeviceCheckCard
+              icon={Laptop}
+              title="Browser"
+              description="Fullscreen and media APIs supported."
+              status={browser.s}
+              message={browser.msg}
+            />
+
+            <DeviceCheckCard
+              icon={Globe}
+              title="Internet"
+              description="Stable connection required."
+              status={network.s}
+              message={network.msg}
+            />
 
             <DeviceCheckCard
               icon={Camera}
@@ -232,16 +405,20 @@ export default function SystemCheckPage({
             </div>
           </div>
 
-          {/* start bar */}
           <div
             className={`mt-6 flex flex-col items-start justify-between gap-5 rounded-[30px] p-7 md:flex-row md:items-center ${glass}`}
           >
             <div>
-              <h2 className={`text-[30px] leading-none ${fSerif}`}>Ready to begin?</h2>
+              <h2 className={`text-[30px] leading-none ${fSerif}`}>
+                Ready to begin?
+              </h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
-                The assessment opens in fullscreen and the {company.durationMins} minute timer starts immediately.
+                {assessment
+                  ? `${assessment.title} · ${assessment.durationMinutes} minutes · ${assessment.totalQuestions} questions. The timer starts when you enter.`
+                  : "Your selected assessment details will appear here."}
               </p>
             </div>
+
             <button
               disabled={!canStart}
               onClick={begin}

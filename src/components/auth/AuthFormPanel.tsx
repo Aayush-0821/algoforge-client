@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, UserPlus } from "lucide-react";
 import { FaGithub, FaGoogle } from "react-icons/fa";
 import { useEffect, useState } from "react";
 
@@ -81,33 +81,46 @@ export default function AuthFormPanel({ mode }: Props) {
     }
   }
 
-  return (
-    <div className="w-full max-w-97.5">
-      <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-        {isLogin ? "Welcome back" : "Create your account"}
-      </h1>
+  const inputClass = `
+    h-11 w-full rounded-xl border border-white/10
+    bg-white/[0.03] px-4 text-sm text-white
+    placeholder:text-zinc-500 outline-none transition
+    focus:border-[#FF9324]/70 focus:bg-white/[0.05]
+    focus:ring-4 focus:ring-[#FF9324]/10
+  `;
 
-      <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-        {isLogin
-          ? "Sign in to continue to AlgoForge."
-          : "Start your AI-powered coding journey."}
-      </p>
+  const oauthClass = `
+    flex h-11 items-center justify-center gap-2
+    rounded-xl border border-white/10 bg-white/[0.03]
+    text-sm font-medium text-white transition-all
+    hover:border-[#FF9324]/60 hover:bg-white/[0.06]
+  `;
+
+  return (
+    <div className="w-full max-w-[390px]">
+      <div className="flex flex-col items-center text-center">
+        
+
+        <h1 className="mt-5 text-3xl font-bold tracking-tight text-white">
+          {isLogin ? "Welcome back" : "Create your account"}
+        </h1>
+
+        <p className="mt-2 text-sm text-zinc-400">
+          {isLogin
+            ? "Sign in to continue to AlgoForge."
+            : "Start your AI-powered coding journey."}
+        </p>
+      </div>
 
       {/* OAuth */}
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <div className="mt-7 grid grid-cols-2 gap-3">
         <button
           type="button"
           onClick={() => {
             window.location.href = getGoogleAuthUrl(mode);
           }}
-          className="
-            flex h-11 items-center justify-center gap-2
-            rounded-xl border border-zinc-200 bg-white
-            text-sm font-medium transition-all
-            hover:border-[#FF9324] hover:bg-orange-50
-            dark:border-zinc-700 dark:bg-zinc-900
-          "
+          className={oauthClass}
         >
           <FaGoogle className="text-red-500" />
           Google
@@ -118,13 +131,7 @@ export default function AuthFormPanel({ mode }: Props) {
           onClick={() => {
             window.location.href = getGitHubAuthUrl(mode);
           }}
-          className="
-            flex h-11 items-center justify-center gap-2
-            rounded-xl border border-zinc-200 bg-white
-            text-sm font-medium transition-all
-            hover:border-[#FF9324] hover:bg-orange-50
-            dark:border-zinc-700 dark:bg-zinc-900
-          "
+          className={oauthClass}
         >
           <FaGithub />
           GitHub
@@ -132,27 +139,19 @@ export default function AuthFormPanel({ mode }: Props) {
       </div>
 
       <div className="my-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-px flex-1 bg-white/10" />
 
-        <span className="text-xs uppercase tracking-widest text-zinc-400">
+        <span className="text-xs uppercase tracking-widest text-zinc-500">
           OR
         </span>
 
-        <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-px flex-1 bg-white/10" />
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="space-y-3">
           {!isLogin && (
-            <input
-              placeholder="Full Name"
-              className="
-                h-11 w-full rounded-xl border border-zinc-200
-                px-4 text-sm outline-none transition
-                focus:border-[#FF9324]
-                dark:border-zinc-700 dark:bg-zinc-900
-              "
-            />
+            <input placeholder="Full Name" className={inputClass} />
           )}
 
           <input
@@ -161,12 +160,7 @@ export default function AuthFormPanel({ mode }: Props) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="
-              h-11 w-full rounded-xl border border-zinc-200
-              px-4 text-sm outline-none transition
-              focus:border-[#FF9324]
-              dark:border-zinc-700 dark:bg-zinc-900
-            "
+            className={inputClass}
           />
 
           <div className="relative">
@@ -176,12 +170,7 @@ export default function AuthFormPanel({ mode }: Props) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="
-                h-11 w-full rounded-xl border border-zinc-200
-                px-4 pr-11 text-sm outline-none transition
-                focus:border-[#FF9324]
-                dark:border-zinc-700 dark:bg-zinc-900
-              "
+              className={`${inputClass} pr-11`}
             />
 
             <button
@@ -190,7 +179,8 @@ export default function AuthFormPanel({ mode }: Props) {
               className="
                 absolute right-3 top-1/2
                 -translate-y-1/2
-                text-zinc-400
+                text-zinc-500
+                transition-colors
                 hover:text-[#FF9324]
               "
             >
@@ -203,7 +193,7 @@ export default function AuthFormPanel({ mode }: Props) {
           <div className="mt-3 flex justify-end">
             <Link
               href="/forgot-password"
-              className="text-sm text-zinc-500 hover:text-[#FF9324]"
+              className="text-sm text-zinc-400 transition-colors hover:text-[#FF9324]"
             >
               Forgot Password?
             </Link>
@@ -211,13 +201,13 @@ export default function AuthFormPanel({ mode }: Props) {
         )}
 
         {error && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <div className="mt-4 rounded-xl border border-red-900/50 bg-red-950/30 px-4 py-3 text-sm text-red-400">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-600 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-400">
+          <div className="mt-4 rounded-xl border border-green-900/50 bg-green-950/30 px-4 py-3 text-sm text-green-400">
             {success}
           </div>
         )}
@@ -228,9 +218,10 @@ export default function AuthFormPanel({ mode }: Props) {
           className="
             mt-5 h-11 w-full rounded-xl
             bg-[#FF9324]
-            text-sm font-semibold text-white
+            text-sm font-semibold text-black
+            shadow-[0_8px_24px_rgba(255,147,36,0.25)]
             transition-all
-            hover:bg-[#ff9d32]
+            hover:bg-[#ffa142]
             active:scale-[0.98]
             disabled:cursor-not-allowed
             disabled:opacity-60
@@ -246,13 +237,13 @@ export default function AuthFormPanel({ mode }: Props) {
         </button>
       </form>
 
-      <p className="mt-5 text-center text-sm text-zinc-500">
+      <p className="mt-6 text-center text-sm text-zinc-400">
         {isLogin ? (
           <>
             Don't have an account?{" "}
             <Link
               href="/signup"
-              className="font-medium text-[#FF9324]"
+              className="font-medium text-[#FF9324] hover:underline"
             >
               Create one
             </Link>
@@ -262,7 +253,7 @@ export default function AuthFormPanel({ mode }: Props) {
             Already have an account?{" "}
             <Link
               href="/login"
-              className="font-medium text-[#FF9324]"
+              className="font-medium text-[#FF9324] hover:underline"
             >
               Sign In
             </Link>
