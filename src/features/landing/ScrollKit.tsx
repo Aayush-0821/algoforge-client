@@ -11,7 +11,6 @@ export const EASE = [0.22, 1, 0.36, 1] as const;
 type Ctx = { p: MotionValue<number>; first: boolean };
 const SceneCtx = createContext<Ctx | null>(null);
 
-/* Pinned scene: content stays put while the section scrolls; children read its progress. */
 export function Scene({ id, first, children }: { id?: string; first?: boolean; children: ReactNode }) {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
@@ -33,7 +32,6 @@ export function Scene({ id, first, children }: { id?: string; first?: boolean; c
   );
 }
 
-/* One word: slides up out of a mask and un-blurs, driven by scene scroll (or in-view outside a scene). */
 function Word({ w, i, className }: { w: string; i: number; className: string }) {
   const ctx = useContext(SceneCtx);
   const idle = useMotionValue(0);
@@ -74,7 +72,6 @@ export function Words({ text, className = "", offset = 0 }: { text: string; clas
   );
 }
 
-/* Block that rises into place with the scene (time-based on the hero). */
 export function Rise({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
   const ctx = useContext(SceneCtx);
   const idle = useMotionValue(0);
@@ -101,7 +98,6 @@ export function Rise({ children, className = "", delay = 0 }: { children: ReactN
   );
 }
 
-/* Plain in-view reveal for sections that aren't pinned scenes. */
 export function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
   return (
     <motion.div
@@ -116,7 +112,6 @@ export function Reveal({ children, className = "", delay = 0 }: { children: Reac
   );
 }
 
-/* Card with a cursor-following ember spotlight. */
 export function SpotCard({ children, className = "", paper = false }: { children: ReactNode; className?: string; paper?: boolean }) {
   const move = (e: MouseEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();

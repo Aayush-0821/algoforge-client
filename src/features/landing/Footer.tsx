@@ -13,7 +13,6 @@ const pixel = Pixelify_Sans({ subsets: ["latin"], weight: ["400", "500"] });
 const CW = 11; // cell width
 const CH = 15; // cell height
 
-/* ASCII texture: a slow noise field of - = + * with orange "sparks" that rain down and flare under the cursor. */
 function AsciiField() {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -141,7 +140,7 @@ export default function Footer() {
         <div className="grid gap-8 border-t border-white/20 py-6 text-xs uppercase tracking-wide md:grid-cols-[1.3fr_1fr_1fr_1.3fr]">
           <div>
             <p className="flex items-center gap-2 text-sm">
-              <Image src="/logo.svg" alt="" width={18} height={18} className="rounded-sm" />
+              <Image src="/logo.png" alt="" width={18} height={18} className="rounded-sm" />
               AlgoForge
             </p>
             <p className="mt-3 text-neutral-500">(c) 2026 AlgoForge</p>

@@ -1,422 +1,417 @@
 "use client";
 
-import { CSSProperties, useEffect, useRef, useState } from "react";
-import { AnimatePresence, MotionValue, motion, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
-import { Newsreader } from "next/font/google";
+import { ReactNode } from "react";
+import { motion } from "framer-motion";
+import { Inter } from "next/font/google";
+import { Braces, Check, Code2, Cpu, Database, GitBranch, Globe, Terminal, TrendingUp } from "lucide-react";
 
 import { FEATURES } from "./features/features";
 
-const serif = Newsreader({ subsets: ["latin"], weight: ["400"] });
 
-const N = FEATURES.length;
-const VH_PER_ITEM = 45; // scroll distance each feature stays active (desktop)
-const SECTION_VH = N * VH_PER_ITEM + 100; // pinned time + one screen to scroll out
+const inter = Inter({ subsets: ["latin"] });
+const SF = `-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", ${inter.style.fontFamily}, system-ui, sans-serif`;
 
-/* ---------- per-feature ambient glow (colored backdrop inside each card) ---------- */
-const GLOWS = [
-  "bg-[radial-gradient(circle_at_50%_88%,rgba(249,115,22,0.30),transparent_65%)]",   // 1 · habits — ember
-  "bg-[radial-gradient(circle_at_28%_28%,rgba(244,63,94,0.24),transparent_62%)]",    // 2 · weak spots — rose
-  "bg-[radial-gradient(circle_at_72%_22%,rgba(167,139,250,0.26),transparent_62%)]",  // 3 · roadmap — violet
-  "bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.22),transparent_62%)]",   // 4 · AI — cyan
-  "bg-[radial-gradient(circle_at_50%_55%,rgba(52,211,153,0.24),transparent_62%)]",   // 5 · sync — emerald
-  "bg-[radial-gradient(circle_at_50%_38%,rgba(250,204,21,0.20),transparent_62%)]",   // 6 · readiness — gold
-];
+const ease = [0.22, 1, 0.36, 1] as const;
+const pad = (n: number) => String(n).padStart(2, "0");
 
-/* ═══════════════ 1 · Habit analysis — breathing bar chart ═══════════════ */
-function BarsVisual() {
-  const hs = [38, 62, 45, 80, 55, 92, 70, 50, 85, 64, 74, 48];
+function Shell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className="absolute inset-0 flex items-end justify-center gap-[6px] px-10 pb-14 pt-14">
-      {hs.map((h, i) => (
-        <motion.span
-          key={i}
-          className="max-w-[14px] flex-1 rounded-t-lg bg-gradient-to-t from-orange-600 via-orange-400 to-amber-300"
-          style={{ opacity: 0.45 + (h / 100) * 0.55 }}
-          animate={{ height: [`${h * 0.55}%`, `${h}%`, `${h * 0.55}%`] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: i * 0.12 }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ═══════════════ 2 · Weak concept detection — pulsing heat grid ═══════════════ */
-function HeatmapVisual() {
-  const hot = new Set([2, 7, 9, 14, 20, 23]);
-  return (
-    <div className="absolute inset-0 grid grid-cols-6 place-items-center gap-3 px-14 py-16">
-      {Array.from({ length: 24 }).map((_, i) => (
-        <motion.span
-          key={i}
-          className={`h-3.5 w-3.5 rounded-full ${
-            hot.has(i)
-              ? "bg-rose-500 shadow-[0_0_18px_rgba(244,63,94,0.9)]"
-              : "bg-white/10"
-          }`}
-          animate={hot.has(i) ? { scale: [1, 1.55, 1], opacity: [0.8, 1, 0.8] } : {}}
-          transition={{ duration: 2, repeat: Infinity, delay: i * 0.08 }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ═══════════════ 3 · Personalized roadmap — path drawing with pulsing nodes ═══════════════ */
-const ROADMAP_D = "M30 250 C 110 250, 90 170, 170 165 S 250 240, 320 190 S 360 70, 370 60";
-const ROADMAP_NODES = [
-  [30, 250], [170, 165], [320, 190], [370, 60],
-];
-
-function RoadmapVisual() {
-  return (
-    <svg viewBox="0 0 400 300" className="absolute inset-0 h-full w-full p-8">
-      <defs>
-        <linearGradient id="rm-grad" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0%" stopColor="#a78bfa" />
-          <stop offset="55%" stopColor="#f472b6" />
-          <stop offset="100%" stopColor="#fbbf24" />
-        </linearGradient>
-      </defs>
-
-      {/* dashed base route */}
-      <path d={ROADMAP_D} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="2" strokeDasharray="4 7" strokeLinecap="round" />
-
-      {/* animated gradient route */}
-      <motion.path
-        d={ROADMAP_D}
-        fill="none"
-        stroke="url(#rm-grad)"
-        strokeWidth="3"
-        strokeLinecap="round"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.6 }}
-      />
-
-      {/* milestone nodes */}
-      {ROADMAP_NODES.map(([x, y], i) => (
-        <g key={i}>
-          <motion.circle
-            cx={x} cy={y} fill="none" stroke="#fbbf24" strokeWidth="1.5"
-            animate={{ r: [6, 14], opacity: [0.8, 0] }}
-            transition={{ duration: 2, repeat: Infinity, delay: i * 0.45, ease: "easeOut" }}
-          />
-          <motion.circle
-            cx={x} cy={y} r="4" fill="#fff7ed"
-            animate={{ opacity: [1, 0.5, 1] }}
-            transition={{ duration: 2, repeat: Infinity, delay: i * 0.45 }}
-          />
-        </g>
-      ))}
-
-      {/* flag at the finish */}
-      <g transform="translate(370 60)">
-        <line x1="0" y1="0" x2="0" y2="-26" stroke="rgba(255,255,255,0.6)" strokeWidth="2" />
-        <motion.path
-          d="M0 -26 L 18 -21 L 0 -15 Z" fill="#fbbf24"
-          animate={{ opacity: [1, 0.5, 1] }}
-          transition={{ duration: 1.6, repeat: Infinity }}
-        />
-      </g>
-    </svg>
-  );
-}
-
-/* ═══════════════ 4 · AI recommendations — orbiting topic chips ═══════════════ */
-function OrbitVisual() {
-  const chips = [
-    { label: "DP", pos: "top-0 left-1/2 -ml-7" },
-    { label: "Graphs", pos: "bottom-5 left-1" },
-    { label: "Trees", pos: "bottom-5 right-1" },
-  ];
-  return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <motion.div
-        className="relative h-52 w-52"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 26, repeat: Infinity, ease: "linear" }}
+    <div className="relative w-full max-w-[500px]">
+      <div aria-hidden className="absolute -inset-10 -z-10 bg-[radial-gradient(circle,rgba(249,115,22,0.10),transparent_62%)]" />
+      <div
+        className={`relative overflow-hidden rounded-[28px] border border-white/10 bg-[#0c0a09]/80 p-6 shadow-[0_40px_100px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl ${className}`}
       >
-        {/* rings */}
-        <div className="absolute inset-0 rounded-full border border-white/10" />
-        <div className="absolute inset-8 rounded-full border border-dashed border-cyan-300/20" />
-
-        {/* orbiting chips (counter-rotated so text stays upright) */}
-        {chips.map((c) => (
-          <motion.span
-            key={c.label}
-            className={`absolute ${c.pos} rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-[10px] font-medium text-cyan-200 backdrop-blur-sm`}
-            animate={{ rotate: -360 }}
-            transition={{ duration: 26, repeat: Infinity, ease: "linear" }}
-          >
-            {c.label}
-          </motion.span>
-        ))}
-      </motion.div>
-
-      {/* core */}
-      <div className="absolute flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-[0_0_40px_rgba(249,115,22,0.55)]">
-        <span className="text-sm font-semibold text-white">AI</span>
+        <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        {children}
       </div>
     </div>
   );
 }
 
-/* ═══════════════ 5 · Progress sync — expanding rings + connected windows ═══════════════ */
-function SyncVisual() {
+function Pill({ label, value, delay = 0 }: { label: string; value: string; delay?: number }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center gap-0 px-10">
-      {/* left window */}
-      <div className="z-10 w-24 shrink-0 rounded-lg border border-emerald-300/25 bg-neutral-900/80 p-2 backdrop-blur-sm">
-        <div className="flex gap-1">
-          <i className="h-1.5 w-1.5 rounded-full bg-red-400/70" />
-          <i className="h-1.5 w-1.5 rounded-full bg-yellow-400/70" />
-          <i className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" />
-        </div>
-        <div className="mt-2 space-y-1">
-          <div className="h-1 rounded bg-emerald-400/40" />
-          <div className="h-1 w-3/4 rounded bg-white/15" />
-          <div className="h-1 w-1/2 rounded bg-white/15" />
-        </div>
-      </div>
-
-      {/* connector with flowing dashes */}
-      <svg width="70" height="20" className="shrink-0">
-        <motion.line
-          x1="0" y1="10" x2="70" y2="10"
-          stroke="#34d399" strokeWidth="2" strokeDasharray="4 6" strokeLinecap="round"
-          animate={{ strokeDashoffset: [0, -20] }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-        />
-      </svg>
-
-      {/* core hub */}
-      <div className="relative flex shrink-0 items-center justify-center">
-        {[0, 1, 2].map((i) => (
-          <motion.span
-            key={i}
-            className="absolute h-14 w-14 rounded-full border border-emerald-400/50"
-            animate={{ scale: [1, 2.6], opacity: [0.7, 0] }}
-            transition={{ duration: 2.6, repeat: Infinity, delay: i * 0.85, ease: "easeOut" }}
-          />
-        ))}
-        <div className="h-5 w-5 rounded-full bg-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.9)]" />
-      </div>
-
-      {/* connector */}
-      <svg width="70" height="20" className="shrink-0">
-        <motion.line
-          x1="0" y1="10" x2="70" y2="10"
-          stroke="#22d3ee" strokeWidth="2" strokeDasharray="4 6" strokeLinecap="round"
-          animate={{ strokeDashoffset: [0, -20] }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-        />
-      </svg>
-
-      {/* right window */}
-      <div className="z-10 w-24 shrink-0 rounded-lg border border-cyan-300/25 bg-neutral-900/80 p-2 backdrop-blur-sm">
-        <div className="flex gap-1">
-          <i className="h-1.5 w-1.5 rounded-full bg-red-400/70" />
-          <i className="h-1.5 w-1.5 rounded-full bg-yellow-400/70" />
-          <i className="h-1.5 w-1.5 rounded-full bg-cyan-400/70" />
-        </div>
-        <div className="mt-2 space-y-1">
-          <div className="h-1 rounded bg-cyan-400/40" />
-          <div className="h-1 w-3/4 rounded bg-white/15" />
-          <div className="h-1 w-1/2 rounded bg-white/15" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════ 6 · Interview readiness — glowing score ring ═══════════════ */
-function GaugeVisual() {
-  return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
-      <div className="relative">
-        {/* sweep hand */}
-        <motion.div
-          className="absolute inset-0 rounded-full"
-          style={{ background: "conic-gradient(from 0deg, rgba(250,204,21,0.35), transparent 60deg)" }}
-          animate={{ rotate: 360 }}
-          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-        />
-        <div
-          className="relative h-40 w-40 rounded-full p-2"
-          style={{ background: "conic-gradient(#fb923c, #facc15, #34d399, rgba(255,255,255,0.08) 78%)" }}
-        >
-          <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-neutral-950">
-            <motion.span
-              className="text-5xl font-light tracking-tight text-white"
-              animate={{ opacity: [1, 0.7, 1] }}
-              transition={{ duration: 2.4, repeat: Infinity }}
-            >
-              92
-            </motion.span>
-            <span className="mt-1 text-[10px] tracking-[0.25em] text-neutral-500">READY</span>
-          </div>
-        </div>
-      </div>
-
-      <motion.span
-        className="rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-1.5 text-xs text-amber-200 backdrop-blur-sm"
-        animate={{ scale: [1, 1.05, 1] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      >
-        Offer-ready
-      </motion.span>
-    </div>
-  );
-}
-
-const VISUALS = [BarsVisual, HeatmapVisual, RoadmapVisual, OrbitVisual, SyncVisual, GaugeVisual];
-
-/* ---------- right-side card: crossfade + gentle scale per scroll segment ---------- */
-function FeatureVisual({
-  index, total, progress, title,
-}: {
-  index: number; total: number; progress: MotionValue<number>; title: string;
-}) {
-  const seg = 1 / total;
-  const start = index * seg;
-  const end = start + seg;
-  const fade = seg * 0.3;
-
-  const ranges = index === 0 ? [0, end - fade, end] : [start, start + fade, end - fade, end];
-  const opacities = index === 0 ? [1, 1, 0] : [0, 1, 1, 0];
-
-  const opacity = useTransform(progress, ranges, opacities);
-  const scale = useTransform(progress, [start, start + fade], [1.04, 1]);
-
-  const V = VISUALS[index % VISUALS.length];
-
-  return (
-    <motion.div style={{ opacity, scale }} className="absolute inset-0 will-change-transform">
-      <div className="relative h-full w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/70 backdrop-blur-sm">
-        {/* ambient glow for this feature */}
-        <div aria-hidden className={`absolute inset-0 ${GLOWS[index % GLOWS.length]}`} />
-        <V />
-        <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.6 }}
+      transition={{ duration: 0.6, delay, ease }}
+      className="flex items-center gap-4 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-[14px]"
+    >
+      <span className="text-neutral-500">{label}</span>
+      <span className="h-4 w-px bg-white/10" />
+      <span className="text-neutral-100">{value}</span>
     </motion.div>
   );
 }
 
-/* ---------- section ---------- */
-export default function FeaturesShowcase() {
-  const ref = useRef<HTMLElement>(null);
-  const [active, setActive] = useState(0);
-  const [desktop, setDesktop] = useState(false);
+function Mark({ className = "h-9 w-9" }: { className?: string }) {
+  return (
+    <span className={`flex shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-orange-400 to-orange-600 text-white ${className}`}>
+      <Braces className="h-[55%] w-[55%]" />
+    </span>
+  );
+}
 
-  useEffect(() => {
-    const mq = matchMedia("(min-width: 1024px)");
-    const on = () => setDesktop(mq.matches);
-    on();
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
-
-  // 0 → 1 across the pinned part of the section
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
-  useMotionValueEvent(scrollYProgress, "change", (p) => {
-    setActive(Math.min(N - 1, Math.max(0, Math.floor(p * N))));
+function HabitsVisual() {
+  const levels = Array.from({ length: 84 }, (_, i) => {
+    const v = (i * 37 + 11) % 13;
+    return v < 4 ? 0 : v < 7 ? 1 : v < 9 ? 2 : v < 11 ? 3 : 4;
   });
+  const tone = [
+    "bg-white/[0.06]",
+    "bg-orange-500/25",
+    "bg-orange-500/45",
+    "bg-orange-500/70",
+    "bg-orange-500",
+  ];
+  return (
+    <div className="flex w-full flex-col items-center gap-4">
+      <Shell>
+        <div className="flex items-center justify-between text-[13px]">
+          <span className="font-medium text-neutral-200">Solving activity</span>
+          <span className="text-neutral-500">Last 12 weeks</span>
+        </div>
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.5 }}
+          transition={{ staggerChildren: 0.01 }}
+          className="mt-5 grid grid-flow-col grid-rows-7 gap-1.5"
+        >
+          {levels.map((l, i) => (
+            <motion.span
+              key={i}
+              variants={{ hidden: { opacity: 0, scale: 0.5 }, show: { opacity: 1, scale: 1 } }}
+              transition={{ duration: 0.4, ease }}
+              className={`aspect-square rounded-[5px] ${tone[l]}`}
+            />
+          ))}
+        </motion.div>
+      </Shell>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Pill label="Avg. solve time" value="18 min" />
+        <Pill label="Streak" value="12 days" delay={0.1} />
+      </div>
+    </div>
+  );
+}
 
-  const pick = (i: number) => {
-    const el = ref.current;
-    if (!desktop || !el) return setActive(i);
-    const top = el.getBoundingClientRect().top + window.scrollY;
-    const y = top + ((i + 0.5) / N) * (el.offsetHeight - window.innerHeight);
-    window.scrollTo({ top: y, behavior: "smooth" });
-  };
+function WeakVisual() {
+  const topics: [string, number][] = [
+    ["Arrays", 92],
+    ["Hashing", 84],
+    ["Trees", 61],
+    ["Graphs", 44],
+    ["Dynamic programming", 38],
+  ];
+  return (
+    <Shell>
+      <div className="flex items-center justify-between text-[13px]">
+        <span className="font-medium text-neutral-200">Topic strength</span>
+        <span className="text-neutral-500">2 need attention</span>
+      </div>
+      <div className="mt-6 space-y-5">
+        {topics.map(([name, v], i) => {
+          const weak = v < 50;
+          return (
+            <div key={name}>
+              <div className="flex items-center justify-between text-[14px]">
+                <span className="flex items-center gap-2.5 text-neutral-200">
+                  {name}
+                  {weak && (
+                    <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[11px] font-medium text-orange-400">
+                      Focus
+                    </span>
+                  )}
+                </span>
+                <span className="tabular-nums text-neutral-500">{v}%</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                <motion.div
+                  initial={{ width: 0 }}
+                  whileInView={{ width: `${v}%` }}
+                  viewport={{ once: true, amount: 0.8 }}
+                  transition={{ duration: 1, delay: i * 0.08, ease }}
+                  className={`h-full rounded-full ${weak ? "bg-orange-500" : "bg-white/35"}`}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Shell>
+  );
+}
 
-  const cur = FEATURES[active];
+function RoadmapVisual() {
+  const back = [
+    ["Week 4 · Graphs", 40],
+    ["Week 3 · Trees", 26],
+    ["Week 2 · Hashing", 13],
+  ] as const;
+  const steps: [string, "done" | "now" | "next"][] = [
+    ["Two pointers", "done"],
+    ["Sliding window", "done"],
+    ["Hash maps", "now"],
+    ["Binary search", "next"],
+  ];
+  return (
+    <div className="relative w-full max-w-[500px] pt-[72px]">
+      {back.map(([label, inset], k) => (
+        <div
+          key={label}
+          style={{ left: inset, right: inset, top: k * 24 }}
+          className="absolute h-14 rounded-t-2xl border border-b-0 border-white/10 bg-white/[0.035] px-4 pt-1.5 text-[11.5px] text-neutral-500"
+        >
+          {label}
+        </div>
+      ))}
+      <Shell className="!rounded-[24px]">
+        <div className="flex items-center justify-between text-[13px]">
+          <span className="font-medium text-neutral-200">Week 1 · Foundations</span>
+          <span className="text-neutral-500">2 / 4</span>
+        </div>
+        <ul className="mt-5 space-y-2.5">
+          {steps.map(([name, state], i) => (
+            <motion.li
+              key={name}
+              initial={{ opacity: 0, x: -12 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.8 }}
+              transition={{ duration: 0.6, delay: i * 0.09, ease }}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-[14px] ${
+                state === "now" ? "border border-orange-500/30 bg-orange-500/10" : "border border-white/[0.06] bg-white/[0.03]"
+              }`}
+            >
+              <span
+                className={`flex h-5 w-5 items-center justify-center rounded-full ${
+                  state === "done"
+                    ? "bg-orange-500 text-black"
+                    : state === "now"
+                      ? "border border-orange-400"
+                      : "border border-white/20"
+                }`}
+              >
+                {state === "done" && <Check size={12} strokeWidth={3} />}
+                {state === "now" && <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />}
+              </span>
+              <span className={state === "next" ? "text-neutral-500" : "text-neutral-100"}>{name}</span>
+              {state === "now" && <span className="ml-auto text-[11px] text-orange-400">In progress</span>}
+            </motion.li>
+          ))}
+        </ul>
+      </Shell>
+    </div>
+  );
+}
+
+/* ───────────────────────── 4 · AI recommendations — a short conversation ───────────────────────── */
+
+function CoachVisual() {
+  const msg = (delay: number) => ({
+    initial: { opacity: 0, y: 14 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, amount: 0.6 },
+    transition: { duration: 0.6, delay, ease },
+  });
+  return (
+    <Shell className="!p-0">
+      <div className="border-b border-white/10 bg-white/[0.03] px-5 py-3 text-[13px] text-neutral-400">
+        <span className="mr-1.5 text-neutral-600">#</span>coach
+      </div>
+      <div className="space-y-5 px-5 py-6">
+        <motion.div {...msg(0)} className="flex gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-[13px] font-semibold text-neutral-200">
+            Y
+          </span>
+          <div>
+            <p className="text-[14px] font-semibold text-neutral-100">
+              You <span className="ml-1 text-[11px] font-normal text-neutral-500">9:03 AM</span>
+            </p>
+            <p className="mt-0.5 text-[14px] leading-6 text-neutral-300">I keep getting stuck on sliding window problems.</p>
+          </div>
+        </motion.div>
+
+        <motion.div {...msg(0.15)} className="flex gap-3">
+          <Mark />
+          <div>
+            <p className="flex items-center gap-2 text-[14px] font-semibold text-neutral-100">
+              AlgoForge
+              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-neutral-400">AI</span>
+              <span className="text-[11px] font-normal text-neutral-500">9:03 AM</span>
+            </p>
+            <p className="mt-0.5 text-[14px] leading-6 text-neutral-300">
+              Your last three attempts broke when shrinking the window. Try <span className="font-semibold text-white">Longest Substring Without Repeating Characters</span> next, then
+              Minimum Window Substring.
+            </p>
+            <div className="mt-3 flex gap-2 text-[11.5px]">
+              <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-orange-300">Medium</span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-neutral-400">Sliding window</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </Shell>
+  );
+}
+
+
+function SyncVisual() {
+  const icons = [Code2, Terminal, Braces, GitBranch, Cpu, Database, Globe];
+  const nodes = icons.map((Icon, i) => {
+    const a = (Math.PI * (i + 0.5)) / icons.length; // spread across the upper half-circle
+    return { Icon, x: 50 - 44 * Math.cos(a), y: 76 - 62 * Math.sin(a), o: 0.55 + 0.45 * Math.sin(a) };
+  });
+  return (
+    <div className="relative mx-auto aspect-[5/4] w-full max-w-[500px]">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+        {nodes.map((n, i) => (
+          <motion.line
+            key={i}
+            x1={50}
+            y1={76}
+            x2={n.x}
+            y2={n.y}
+            stroke="rgba(249,115,22,0.35)"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+            strokeDasharray="3 5"
+            animate={{ strokeDashoffset: [0, -16] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
+          />
+        ))}
+      </svg>
+
+      {nodes.map(({ Icon, x, y, o }, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, scale: 0.6 }}
+          whileInView={{ opacity: o, scale: 1 }}
+          viewport={{ once: true, amount: 0.5 }}
+          transition={{ duration: 0.6, delay: i * 0.07, ease }}
+          style={{ left: `${x}%`, top: `${y}%` }}
+          className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/12 bg-[#0c0a09]/90 text-neutral-300 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)]"
+        >
+          <Icon size={17} />
+        </motion.span>
+      ))}
+
+      <div className="absolute left-1/2 top-[76%] -translate-x-1/2 -translate-y-1/2">
+        <motion.span
+          className="absolute inset-0 rounded-full border border-orange-500/50"
+          animate={{ scale: [1, 2.2], opacity: [0.6, 0] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
+        />
+        <Mark className="relative h-16 w-16 !rounded-full shadow-[0_0_50px_rgba(249,115,22,0.45)]" />
+      </div>
+      <div className="absolute left-1/2 top-[92%] flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-[13px] text-neutral-300">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Synced just now
+      </div>
+    </div>
+  );
+}
+
+
+function ReadinessVisual() {
+  const C = 2 * Math.PI * 54;
+  return (
+    <div className="flex w-full flex-col items-center gap-3">
+      <Shell className="flex flex-col items-center !py-8">
+        <div className="relative h-[168px] w-[168px]">
+          <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7" />
+            <motion.circle
+              cx="60"
+              cy="60"
+              r="54"
+              fill="none"
+              stroke="#f97316"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeDasharray={C}
+              initial={{ strokeDashoffset: C }}
+              whileInView={{ strokeDashoffset: C * 0.08 }}
+              viewport={{ once: true, amount: 0.6 }}
+              transition={{ duration: 1.6, ease }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[44px] font-semibold leading-none tracking-[-0.04em] text-white">92</span>
+            <span className="mt-1.5 text-[11px] uppercase tracking-[0.2em] text-neutral-500">Ready</span>
+          </div>
+        </div>
+        <span className="mt-5 flex items-center gap-1.5 text-[13px] text-emerald-400">
+          <TrendingUp size={14} /> +6 this month
+        </span>
+      </Shell>
+      <Pill label="Strongest" value="Arrays" />
+      <Pill label="Focus next" value="Dynamic programming" delay={0.1} />
+    </div>
+  );
+}
+
+const VISUALS = [CoachVisual, WeakVisual, RoadmapVisual, CoachVisual, SyncVisual, ReadinessVisual];
+
+function Row({ i }: { i: number }) {
+  const f = FEATURES[i];
+  const V = VISUALS[i % VISUALS.length];
+  const flip = i % 2 === 1;
 
   return (
-    <section
-      id="features"
-      ref={ref}
-      style={{ "--h": `${SECTION_VH}vh` } as CSSProperties}
-      className="relative z-10 text-white [overflow:clip] lg:h-[var(--h)]"
-    >
-      {/* transparent layer — no bg, no borders; particles show through */}
-      <div className="relative lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:justify-center">
-        <div className="mx-auto grid w-full max-w-[1240px] items-center gap-16 px-8 md:px-12 lg:grid-cols-2">
-          {/* left — headline + 6 points, no lines, no boxes */}
-          <div>
-            <h2
-              className={`${serif.className} max-w-[560px] text-[clamp(1.75rem,3.1vw,2.7rem)] leading-[1.18] tracking-[-0.02em]`}
-            >
-              <span className="text-white">Everything you need to prep smarter.</span>
-            </h2>
+    <div className="grid items-center gap-12 py-16 md:py-24 lg:grid-cols-2 lg:gap-28">
+      <motion.div
+        initial={{ opacity: 0, y: 32 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.4 }}
+        transition={{ duration: 0.9, ease }}
+        className={flip ? "lg:order-2" : ""}
+      >
+        
+        <h3 className="mt-6 max-w-[520px] text-balance text-[clamp(2.25rem,4.6vw,4rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-white">
+          {f.title}
+        </h3>
+        <p className="mt-6 max-w-[440px] text-[17px] leading-8 text-neutral-400">{f.description}</p>
+      </motion.div>
 
-            <ul className="mt-10 space-y-7">
-              {FEATURES.map((f, i) => {
-                const on = i === active;
-                return (
-                  <li key={f.id}>
-                    <button onClick={() => pick(i)} aria-expanded={on} className="flex w-full items-start gap-5 text-left">
-                      <f.icon
-                        size={18}
-                        className={`mt-0.5 shrink-0 transition-colors duration-500 ${on ? "text-orange-500" : "text-neutral-600"}`}
-                      />
-                      <span className="block">
-                        <span
-                          className={`block text-[17px] transition-colors duration-500 md:text-xl ${
-                            on ? "text-white" : "text-neutral-500"
-                          }`}
-                        >
-                          {f.title}
-                        </span>
-                        <AnimatePresence initial={false}>
-                          {on && (
-                            <motion.span
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                              className="block overflow-hidden"
-                            >
-                              <span className="mt-3 block max-w-md text-[15px] leading-7 text-neutral-400">
-                                {f.description}
-                              </span>
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+      <motion.div
+        initial={{ opacity: 0, y: 40, scale: 0.97 }}
+        whileInView={{ opacity: 1, y: 0, scale: 1 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 1, delay: 0.1, ease }}
+        className={`flex justify-center ${flip ? "lg:order-1 lg:justify-start" : "lg:justify-end"}`}
+      >
+        <V />
+      </motion.div>
+    </div>
+  );
+}
 
-          {/* right — visual cards crossfading 1 → 6 (desktop only) */}
-          <div className="relative hidden lg:block">
-            <div className="relative aspect-[4/3] w-full">
-              {FEATURES.map((f, i) => (
-                <FeatureVisual key={f.id} index={i} total={N} progress={scrollYProgress} title={f.title} />
-              ))}
-            </div>
+export default function FeaturesShowcase() {
+  return (
+    <section id="features" style={{ fontFamily: SF }} className="relative z-10 px-6 pb-16 pt-36 text-white md:pt-44">
+      <div className="mx-auto max-w-[1180px]">
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.5 }}
+          transition={{ duration: 0.9, ease }}
+          className="text-center"
+        >
+          <span className="inline-flex items-center rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium tracking-wide text-neutral-300 backdrop-blur-xl">
+            Features
+          </span>
+          <h2 className="mt-6 text-[clamp(2.6rem,6.6vw,6rem)] font-semibold leading-[1] tracking-[-0.045em]">
+            <span className="block text-white">Everything you need</span>
+            <span className="block bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300 bg-clip-text text-transparent">
+              to prep smarter.
+            </span>
+          </h2>
+        </motion.div>
 
-            <div className="mt-5 flex items-center justify-between text-xs text-neutral-500">
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={active}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.25 }}
-                  className="truncate pr-4"
-                >
-                  {cur.title}
-                </motion.span>
-              </AnimatePresence>
-              <span className="font-mono tabular-nums">
-                {String(active + 1).padStart(2, "0")} / {String(N).padStart(2, "0")}
-              </span>
-            </div>
-          </div>
+        <div className="mt-8 md:mt-12">
+          {FEATURES.map((f, i) => (
+            <Row key={f.id} i={i} />
+          ))}
         </div>
       </div>
     </section>

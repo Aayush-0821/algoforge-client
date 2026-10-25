@@ -54,7 +54,7 @@ export default function AuthContainer({ children }: Props) {
             </span>
           </div>
 
-          <div className="flex flex-1 items-center justify-center overflow-y-auto px-8 py-20 lg:px-10 xl:px-14">
+          <div className="flex flex-1 items-center justify-center overflow-y-auto px-8 py-14 [scrollbar-width:none] lg:px-10 xl:px-14 [&::-webkit-scrollbar]:hidden">
             {children}
           </div>
         </div>

@@ -13,7 +13,7 @@ export default function Logo() {
       "
     >
       <Image
-        src="/logo.svg"
+        src="/logo.png"
         alt="AlgoForge"
         width={46}
         height={46}
