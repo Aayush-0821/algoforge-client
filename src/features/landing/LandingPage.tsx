@@ -4,26 +4,25 @@ import { ReactNode, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { AppWindow, ArrowUpRight, Check, Play } from "lucide-react";
+import { ArrowUpRight, Check, Play } from "lucide-react";
 
 import ParticleField from "./ParticleField";
 import CardOrbit from "./CardOrbit";
 import Footer from "./Footer";
 import FeaturesShowcase from "./FeaturesShowcase";
+import ExtensionShowcase from "./ExtensionShowcase";
+import FaqSection from "./FaqSection";
 import { navLinks } from "./navbar/nav-links";
-import { supportedPlatforms, chromeStoreStats } from "./extension/extension-data";
-import { solution, analysis, recommendations } from "./showcase/data";
 import { plans, comparisonFeatures, pricingFooter } from "./pricing/pricing-data";
-import { H1, P, TAG, Reveal, Rise, Scene, SpotCard, Words } from "./ScrollKit";
+import { H1, P, Reveal, Rise, Scene, Words } from "./ScrollKit";
 
-/* ---------- Floating pill nav (theme toggle removed, spacing tightened) ---------- */
 function Nav() {
   return (
     <header className="fixed inset-x-0 top-5 z-50 flex justify-center px-4">
       <nav className="flex w-full max-w-3xl items-center justify-between gap-8 rounded-2xl border border-white/10 bg-black/45 py-2 pl-5 pr-2 backdrop-blur-xl">
         <Link href="/" className="flex items-center gap-2 text-sm font-medium text-white">
-          <Image src="/logo.svg" alt="" width={24} height={24} className="rounded-md" priority />
-          Algo<span className="-ml-1.5 text-orange-500">Forge</span>
+          <Image src="/logo.png" alt="" width={45} height={45} className="rounded-md" priority />
+          AlgoForge
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">
@@ -50,7 +49,6 @@ function Nav() {
   );
 }
 
-/* ---------- Paper panel: always light now ---------- */
 function Panel({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start 20%"] });
@@ -69,38 +67,6 @@ function Panel({ children }: { children: ReactNode }) {
   );
 }
 
-/* ---------- Workspace: browser-style frame on an ember gradient ---------- */
-function Workspace() {
-  return (
-    <Reveal delay={0.15} className="self-start">
-      <div className="rounded-3xl bg-gradient-to-br from-orange-500 via-orange-700 to-rose-950 p-4 shadow-[0_40px_90px_-30px_rgba(234,88,12,0.55)]">
-        <div className="overflow-hidden rounded-xl bg-neutral-950 text-white">
-          <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-3">
-            <i className="h-2.5 w-2.5 rounded-full bg-white/20" />
-            <i className="h-2.5 w-2.5 rounded-full bg-white/20" />
-            <i className="h-2.5 w-2.5 rounded-full bg-white/20" />
-            <span className={`${TAG} ml-3`}>AF WORKSPACE</span>
-          </div>
-          <pre className="overflow-x-auto p-4 font-mono text-[12px] leading-6">
-            {solution.map((l, n) => (
-              <motion.div
-                key={l.id}
-                animate={l.highlight ? { backgroundColor: ["rgba(249,115,22,0.10)", "rgba(249,115,22,0.28)", "rgba(249,115,22,0.10)"] } : undefined}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className={`-mx-2 flex px-2 ${l.highlight ? "rounded border-l-2 border-orange-400" : ""}`}
-              >
-                <span className="w-6 shrink-0 select-none text-white/25">{n + 1}</span>
-                <span>{l.text || "\u00A0"}</span>
-              </motion.div>
-            ))}
-          </pre>
-        </div>
-      </div>
-    </Reveal>
-  );
-}
-
-/* ---------- Pricing: window-style cards on an ember sky (follows the pricing reference) ---------- */
 const sentence = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
 function includeRow(title: string, v: any) {
@@ -182,9 +148,8 @@ function PlanCard({ p }: { p: (typeof plans)[number] }) {
 
 function Pricing() {
   return (
-    <section id="pricing" className="px-4 pb-20 pt-10">
+    <section id="pricing" className="px-4 pb-24 pt-28">
       <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-[linear-gradient(180deg,#ea580c_0%,#fb923c_28%,#fed7aa_58%,#f3f3f1_92%)] px-6 pb-16 pt-20 md:px-10 md:pt-24">
-        {/* soft clouds */}
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <div className="absolute -left-20 top-24 h-56 w-[28rem] rounded-full bg-white/50 blur-3xl" />
           <div className="absolute -right-24 top-40 h-64 w-[32rem] rounded-full bg-orange-100/60 blur-3xl" />
@@ -223,16 +188,29 @@ function Pricing() {
 }
 
 export default function LandingPage() {
+  const { scrollY } = useScroll();
+
+const heroOpacity = useTransform(
+  scrollY,
+  [0, 180, 480],
+  [1, 0.72, 0],
+);
+
+const heroY = useTransform(
+  scrollY,
+  [0, 480],
+  [0, -36],
+);
   return (
     <main className="relative bg-[#060504] text-white">
       <ParticleField />
       <CardOrbit />
       <Nav />
 
-      {/* 1 · Hero — unchanged */}
+      {/* 1 · Hero */}
       <Scene first>
+        
         <div className="relative isolate flex-1 w-full overflow-visible">
-          {/* Upper-left headline */}
           <div className="absolute left-0 top-[5%] z-10 max-w-[92vw] md:left-[2%] md:top-[7%] md:max-w-[min(760px,64vw)]">
             <h1 className={`${H1} text-left text-[clamp(3.25rem,7.8vw,7.5rem)]`}>
               <span className="block"><Words text="Stop Solving" /></span>
@@ -245,8 +223,6 @@ export default function LandingPage() {
               </span>
             </h1>
           </div>
-
-          {/* Lower-right product story and actions */}
           <Rise className="absolute bottom-[2%] right-0 z-10 flex w-full max-w-[440px] flex-col items-start gap-5 text-left sm:bottom-[4%] md:right-[2%] md:w-[38%] md:max-w-[460px]">
             <div className="flex flex-wrap gap-x-4 gap-y-2"></div>
             <p className={`${P} max-w-[420px] text-[14px] leading-7 text-neutral-300 md:text-[15px]`}>
@@ -269,83 +245,16 @@ export default function LandingPage() {
         </div>
       </Scene>
 
-      {/* 2 · Features — scattered particles + alternating image rows */}
+      {/* 2 · Features */}
       <FeaturesShowcase />
 
-      {/* 3 · Extension — unchanged for now */}
-      <Scene id="extension">
-        <div className="text-center">
-          <h2 className={H1}>
-            <Words text="Install Once." />
-            <br />
-            <Words text="Everything Else Just Works." offset={2} />
-          </h2>
-          <Rise className={`${P} mx-auto mt-5 max-w-md`}>Add AlgoForge to Chrome and your progress syncs automatically as you solve.</Rise>
-          <Rise delay={0.05}>
-            <button className="mx-auto mt-6 flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-medium transition-colors hover:bg-orange-400">
-              <AppWindow size={16} /> Add to Chrome
-            </button>
-          </Rise>
-        </div>
-        <Rise delay={0.1} className="mt-auto grid grid-cols-3 gap-3 text-center">
-          {[
-            [chromeStoreStats.rating, "Chrome Store rating"],
-            [chromeStoreStats.users.replace(" Developers", ""), "Developers"],
-            [String(supportedPlatforms.length), "Supported platforms"],
-          ].map(([n, l]) => (
-            <SpotCard key={l} className="px-3 py-5">
-              <p className="text-3xl font-light md:text-5xl">{n}</p>
-              <p className="mt-1 text-xs text-neutral-500">{l}</p>
-            </SpotCard>
-          ))}
-        </Rise>
-      </Scene>
+      {/* 3 · Extension — MacBook mockup + premium layout */}
+      <ExtensionShowcase />
 
-      {/* 4 · Workspace + pricing — light panel */}
+      {/* 4 · Pricing + FAQ — light panel */}
       <Panel>
-        <div className="mx-auto grid max-w-6xl gap-14 px-6 pb-8 pt-28 lg:grid-cols-[1fr_420px]">
-          <div>
-            <h2 className="text-5xl font-light leading-[0.95] tracking-[-0.04em] md:text-7xl">
-              <Words text="Everything you need," />
-              <br />
-              <Words text="right where you solve." offset={3} />
-            </h2>
-            <Reveal delay={0.1}>
-              <p className="mt-6 max-w-md text-[15px] leading-7 text-neutral-500">
-                Analyze every solution, discover weak topics, receive AI-powered recommendations, and build interview-ready skills
-                without leaving your coding platform.
-              </p>
-            </Reveal>
-            <div className="mt-12 grid grid-cols-3 gap-3">
-              {analysis.map((a, i) => (
-                <Reveal key={a.id} delay={i * 0.1}>
-                  <SpotCard paper className="p-4">
-                    <p className="font-mono text-[11px] tracking-[0.18em] text-neutral-500">{a.title}</p>
-                    <p className="mt-2 text-2xl font-light md:text-3xl">{a.value}</p>
-                    <div className="mt-3 h-px w-full bg-gradient-to-r from-orange-500 to-transparent" />
-                  </SpotCard>
-                </Reveal>
-              ))}
-            </div>
-            <ul className="mt-12 divide-y divide-black/10 border-y border-black/10">
-              {recommendations.map((r, i) => (
-                <li key={r.id}>
-                  <Reveal delay={i * 0.06}>
-                    <div className="group flex items-center justify-between py-4 text-sm transition-all duration-300 hover:pl-3">
-                      <span className="flex items-center gap-3">
-                        <ArrowUpRight size={14} className="-ml-5 text-orange-500 opacity-0 transition-all duration-300 group-hover:ml-0 group-hover:opacity-100" />
-                        {r.title}
-                      </span>
-                      <span className="text-neutral-500">{r.topic} · {r.difficulty}</span>
-                    </div>
-                  </Reveal>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <Workspace />
-        </div>
         <Pricing />
+        <FaqSection />
       </Panel>
 
       {/* 5 · Dark footer */}

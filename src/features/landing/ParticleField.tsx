@@ -3,22 +3,19 @@
 import { useEffect, useRef } from "react";
 
 const N = 70000;
-const SCENE_VH = 2; // fallback height of a Scene when a section id can't be found
+const SCENE_VH = 2; 
 
 let seed = 7;
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const gauss = () => (rnd() + rnd() + rnd() - 1.5) / 1.5;
 const TAU = Math.PI * 2;
 
-// Binary tree layout (kept for kind 1, no longer in the scroll sequence)
 const TREE: [number, number][] = [];
 for (let l = 0; l < 4; l++) {
   for (let k = 0; k < 2 ** l; k++) TREE.push([((k + 0.5) / 2 ** l) * 3.8 - 1.9, 1.35 - l * 0.9]);
 }
 
 const rotX = (y: number, z: number, a: number): [number, number] => [y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a)];
-
-// 0 neural core · 1 algorithm tree (unused) · 2 browser grid · 3 orbiting nodes · 4 ingot · 5 uniform scatter
 function build(kind: number) {
   const a = new Float32Array(N * 3);
 
@@ -27,7 +24,7 @@ function build(kind: number) {
     const th = rnd() * TAU;
 
     if (kind === 0) {
-      // Neural Core: a spherical shell, denser inner neural clusters, and radial sparks.
+
       const mode = rnd();
       if (mode < 0.66) {
         const u = rnd() * 2 - 1;
@@ -98,8 +95,6 @@ function build(kind: number) {
       const k = 1 - 0.28 * ((y / h + 1) / 2); x *= k; z *= k;
       [y, z] = rotX(y, z, -0.45);
     } else {
-      // Uniform scatter: a wide, shallow slab that fills the viewport evenly. The shader
-      // widens it for ultrawide screens and thins it out for small ones.
       x = (rnd() * 2 - 1) * 4.8;
       y = (rnd() * 2 - 1) * 2.9;
       z = (rnd() * 2 - 1) * 1.1;
@@ -190,8 +185,8 @@ export default function ParticleField() {
       gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
       return b;
     };
-    // sequence: core -> scatter (features) -> browser grid (extension) -> orbit -> ingot
-    const shapes = [0, 5, 2, 3, 4].map((k) => buf(build(k)));
+
+    const shapes = [0, 5].map((k) => buf(build(k)));
     const seeds = buf(Float32Array.from({ length: N }, rnd));
     const attr = (name: string, b: WebGLBuffer, size: number) => {
       const l = gl.getAttribLocation(pr, name);
@@ -200,6 +195,8 @@ export default function ParticleField() {
       gl.vertexAttribPointer(l, size, gl.FLOAT, false, 0, 0);
     };
     attr("aS", seeds, 1);
+    attr("aA", shapes[0], 3);
+    attr("aB", shapes[1], 3);
     const U = (n: string) => gl.getUniformLocation(pr, n);
     const [uT, uTime, uAsp, uDpr, uM, uIntro, uVel, uF, uCalm] = ["uT", "uTime", "uAsp", "uDpr", "uM", "uIntro", "uVel", "uF", "uCalm"].map(U);
 
@@ -217,17 +214,11 @@ export default function ParticleField() {
     resize();
     window.addEventListener("resize", resize);
 
-    /* Scroll stops: the scroll position at which each shape is fully formed.
-       Measured from the #features and #extension sections so section heights can be anything. */
-    let stops = [0, 0, 0, 0, 0];
+    let featuresTop = 0;
     const measure = () => {
       const vh = window.innerHeight, y = window.scrollY;
       const feat = document.getElementById("features");
-      const ext = document.getElementById("extension");
-      const ft = feat ? feat.getBoundingClientRect().top + y : vh * SCENE_VH;
-      const et = ext ? ext.getBoundingClientRect().top + y : ft + vh * SCENE_VH;
-      const ee = ext ? et + ext.offsetHeight : et + vh * SCENE_VH;
-      stops = [0, ft, et, ee, ee + vh * SCENE_VH];
+      featuresTop = feat ? feat.getBoundingClientRect().top + y : vh * SCENE_VH;
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -239,32 +230,14 @@ export default function ParticleField() {
     const move = (e: PointerEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
     window.addEventListener("pointermove", move, { passive: true });
 
-    let cur = -1, raf = 0, t0 = -1, lastY = window.scrollY, vel = 0;
+    let raf = 0, t0 = -1, lastY = window.scrollY, vel = 0;
     const frame = (ms: number) => {
       if (t0 < 0) t0 = ms;
       const s = window.scrollY, vh = window.innerHeight;
-
-      let i = 0;
-      while (i < 4 && s >= stops[i + 1]) i++;
-      const j = Math.min(i + 1, 4);
-      const a = stops[i], b = i < 4 ? stops[i + 1] : stops[4];
-      // morph happens over the last 90% of a viewport before the next stop
-      const m = i >= 4 ? 0 : smooth(Math.max(a, b - vh * 0.9), b, s);
-      const seg = i >= 4 ? 0 : Math.min(1, Math.max(0, (s - a) / Math.max(1, b - a)));
-      const f = i + seg;
-
-      // scroll angle: core turns a little, scatter stays flat, later shapes keep their original angles
-      let rot: number;
-      if (i === 0) rot = 0.5 * f * (1 - m);
-      else if (i === 1) rot = m;
-      else rot = 0.5 * f;
-      const calm = i === 0 ? m : i === 1 ? 1 - m : 0;
-
-      if (i !== cur) {
-        cur = i;
-        attr("aA", shapes[i], 3);
-        attr("aB", shapes[j], 3);
-      }
+      const m = smooth(Math.max(0, featuresTop - vh * 0.9), featuresTop, s);
+      const seg = Math.min(1, Math.max(0, s / Math.max(1, featuresTop)));
+      const rot = 0.5 * seg * (1 - m);
+      const calm = m;
 
       vel += (Math.min(1, Math.abs(s - lastY) / 60) - vel) * 0.08;
       lastY = s;

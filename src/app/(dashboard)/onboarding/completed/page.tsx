@@ -29,8 +29,6 @@ export default function OnboardingCompletedPage() {
       "
     >
       <div className="flex flex-col items-center text-center">
-
-        {/* Forgey */}
         <div
           className="
             mb-8
@@ -64,9 +62,7 @@ export default function OnboardingCompletedPage() {
         >
           Forgey is preparing coding workspace...
         </p>
-
-
-        {/* Loading dots */}
+        
         <div className="mt-6 flex gap-2">
 
           <span
