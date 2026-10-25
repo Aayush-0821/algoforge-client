@@ -7,47 +7,46 @@ interface AuthLayoutProps {
   children: ReactNode;
 }
 
-export default function AuthLayout({
-  children,
-}: AuthLayoutProps) {
+export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <main
       className="
-      relative
-      flex
-      min-h-screen
-      items-center
-      justify-center
-      overflow-hidden
-
-      bg-[#FFFCEF]
-      dark:bg-[#09090B]
-
-      transition-colors
-      duration-500
-    "
+        relative
+        flex
+        min-h-screen
+        items-center
+        justify-center
+        overflow-hidden
+        bg-[#07070a]
+        [color-scheme:dark]
+      "
     >
-      {/* Background Glow */}
+      {/* Aurora background */}
+      <div className="pointer-events-none absolute -left-32 -top-40 h-[560px] w-[560px] rounded-full bg-[#FF9324]/25 blur-[150px]" />
+      <div className="pointer-events-none absolute -bottom-52 -right-32 h-[640px] w-[640px] rounded-full bg-[#6d4cff]/25 blur-[170px]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[820px] -translate-x-1/2 -translate-y-1/2 rotate-[-18deg] rounded-full bg-[#FF9324]/10 blur-[140px]" />
 
-      <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-[#FF9324]/15 blur-[140px]" />
-
-      <div className="absolute -bottom-56 -right-40 h-[600px] w-[600px] rounded-full bg-[#FF9324]/10 blur-[170px]" />
-
-      {/* Subtle Grid */}
-
+      {/* Soft diagonal light streaks */}
       <div
         className="
-        absolute
-        inset-0
+          pointer-events-none
+          absolute
+          inset-0
+          opacity-60
+          [background-image:repeating-linear-gradient(115deg,rgba(255,255,255,0.035)_0px,rgba(255,255,255,0.035)_1px,transparent_1px,transparent_26px)]
+        "
+      />
 
-        opacity-[0.04]
-
-        [background-image:linear-gradient(rgba(0,0,0,.25)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,.25)_1px,transparent_1px)]
-
-        dark:[background-image:linear-gradient(rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px)]
-
-        bg-[size:42px_42px]
-      "
+      {/* Subtle grid */}
+      <div
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+          opacity-[0.05]
+          [background-image:linear-gradient(rgba(255,255,255,.4)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.4)_1px,transparent_1px)]
+          [background-size:42px_42px]
+        "
       />
 
       <AuthContainer>{children}</AuthContainer>
