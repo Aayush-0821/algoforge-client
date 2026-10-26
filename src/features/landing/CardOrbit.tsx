@@ -1,22 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  MotionValue,
-  motion,
-  useAnimationFrame,
-  useMotionValue,
-  useReducedMotion,
-  useScroll,
-  useSpring,
-  useTransform,
-} from "framer-motion";
 import { Quote } from "lucide-react";
 
-const clamp = (v: number) => Math.min(1, Math.max(0, v));
-const GAP = 1.12; // arc length between card centres as a multiple of card width (1 = touching)
-
-/* Short lines in AlgoForge's voice. Add or edit freely; the ring uses as many as it needs (max 16). */
+/* Short lines in AlgoForge's voice. Add or edit freely (max 16). */
 const QUOTES = [
   "Stop solving. Start forging.",
   "Forgey studies how you solve problems, not just whether you did.",
@@ -36,91 +23,188 @@ const QUOTES = [
   "Spot the weak concept before it costs you.",
 ];
 
-type Dim = { R: number; w: number; h: number; n: number };
+/*
+ * Timeline (all driven by window scroll):
+ *   0.05 – 0.50 vh  hero content fades out            (HeroFade in LandingPage)
+ *   START …         quotes rise from the bottom edge as a tall, narrow twisting column;
+ *                   the particles start scattering here too (ParticleField reads orbitTimeline)
+ *   … s1            the last quote leaves the top; <OrbitSpacer /> sizes itself so the features arrive right then
+ */
+const START = 0.18; // scroll (in viewport heights) where the quotes begin
+const PAR = 1.25; // column travel per pixel of scroll (higher = faster sweep)
+const PER_TURN = 6; // quotes per full turn of the helix
+const HANDOFF = 0.38; // features' first content enters the screen this many viewport heights before the last quote is gone
+const FEATURES_LEAD = 150; // px from the features section top to its first visible content (its top padding)
 
-function QuoteCard({ i, step, dim, text, rotateY }: { i: number; step: number; dim: Dim; text: string; rotateY: MotionValue<number> }) {
-  // fade with depth: full strength facing the viewer, softly dim toward the sides
-  const opacity = useTransform(rotateY, (r) => {
-    const a = (((i * step + r) % 360) + 360) % 360;
-    const c = Math.cos((a * Math.PI) / 180);
-    return 0.18 + 0.82 * Math.pow(Math.max(0, c), 0.7);
-  });
-
-  return (
-    <div
-      className="absolute left-1/2 top-1/2 [backface-visibility:hidden]"
-      style={{
-        width: dim.w,
-        height: dim.h,
-        marginLeft: -dim.w / 2,
-        marginTop: -dim.h / 2,
-        transform: `rotateY(${i * step}deg) translateZ(${dim.R}px) translateY(${((i % 3) - 1) * 30}px)`,
-      }}
-    >
-      <motion.div
-        style={{ opacity }}
-        className="flex h-full flex-col justify-between rounded-2xl border border-white/12 bg-neutral-900/75 p-4 text-white shadow-[0_30px_60px_-24px_rgba(0,0,0,0.85)] will-change-transform md:p-5"
-      >
-        <Quote size={14} className="text-orange-500" />
-        <p className="text-[14px] font-light leading-[1.45] text-neutral-100 md:text-[15px]">{text}</p>
-        <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-          <span className="h-px w-5 bg-gradient-to-r from-orange-500 to-transparent" />
-          AlgoForge
-        </div>
-      </motion.div>
-    </div>
-  );
+/** Single source of truth for sizes and scroll timing. */
+export function metrics() {
+  const w = typeof window === "undefined" ? 1440 : innerWidth;
+  const vh = typeof window === "undefined" ? 900 : innerHeight;
+  const mobile = w < 768;
+  const n = mobile ? 9 : 12;
+  const cw = mobile ? 190 : 230;
+  const ch = mobile ? 112 : 128;
+  const R = mobile ? 118 : 200;
+  const dy = vh * (mobile ? 0.055 : 0.06);
+  const travel = vh + 2 * ch + (n - 1) * dy;
+  const s0 = START * vh;
+  const s1 = s0 + travel / PAR;
+  return { vh, n, cw, ch, R, dy, travel, s0, s1 };
 }
 
-/* A tight ring of quote cards that sweeps up through the viewport as the hero hands off to the features. */
-export default function CardOrbit() {
-  const reduce = useReducedMotion();
-  const { scrollY } = useScroll();
-  // spring-smoothed scroll: wheel notches and trackpad flicks glide instead of stepping
-  const spring = useSpring(scrollY, { stiffness: 70, damping: 22, mass: 0.5, restDelta: 0.05 });
-  const sy = reduce ? scrollY : spring;
+/** Scroll positions (px) where the orbit starts and ends. */
+export const orbitTimeline = () => {
+  const m = metrics();
+  return { s0: m.s0, s1: m.s1 };
+};
 
-  const vh = useRef(900);
-  const [dim, setDim] = useState<Dim>({ R: 560, w: 230, h: 128, n: 14 });
+/** Transparent scroll room after the hero. Measures itself so the features start the moment the orbit ends. */
+export function OrbitSpacer() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      const m = metrics();
+      const top = el.getBoundingClientRect().top + scrollY; // where this spacer starts in the page
+      const needed = m.s1 - HANDOFF * m.vh + m.vh - FEATURES_LEAD - top;
+      const h = Math.max(0, Math.round(needed));
+      if (Math.abs(el.offsetHeight - h) > 1) el.style.height = h + "px";
+    };
+    update();
+    addEventListener("resize", update);
+    addEventListener("load", update);
+    const ro = new ResizeObserver(update);
+    if (el.previousElementSibling) ro.observe(el.previousElementSibling);
+    return () => {
+      removeEventListener("resize", update);
+      removeEventListener("load", update);
+      ro.disconnect();
+    };
+  }, []);
+  return <div ref={ref} aria-hidden style={{ height: "130vh" }} />;
+}
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const sstep = (e0: number, e1: number, x: number) => {
+  const t = clamp01((x - e0) / (e1 - e0));
+  return t * t * (3 - 2 * t);
+};
+
+export default function CardOrbit() {
+  const root = useRef<HTMLDivElement>(null);
+  const els = useRef<(HTMLDivElement | null)[]>([]);
+  const [n, setN] = useState(12);
 
   useEffect(() => {
-    const on = () => {
-      vh.current = innerHeight;
-      const mobile = innerWidth < 768;
-      const R = mobile ? 250 : 560;
-      const w = mobile ? 190 : 230;
-      const h = mobile ? 112 : 128;
-      const n = Math.min(QUOTES.length, Math.max(6, Math.round((2 * Math.PI * R) / (w * GAP))));
-      setDim({ R, w, h, n });
-    };
+    const on = () => setN(metrics().n);
     on();
     addEventListener("resize", on);
     return () => removeEventListener("resize", on);
   }, []);
 
-  const t = useTransform(sy, (v) => clamp((v - vh.current * 0.3) / (vh.current * 1.5)));
-  const y = useTransform(t, (v) => (0.62 - 1.3 * v) * vh.current);
-  const opacity = useTransform(t, [0, 0.12, 0.85, 1], [0, 1, 1, 0]);
-  const display = useTransform(t, (v) => (v <= 0 || v >= 1 ? "none" : "block"));
+  useEffect(() => {
+    const rootEl = root.current;
+    if (!rootEl) return;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // slow constant drift so the ring feels alive even when scrolling pauses
-  const idle = useMotionValue(0);
-  useAnimationFrame((time) => {
-    if (reduce) return;
-    const v = t.get();
-    if (v > 0 && v < 1) idle.set(time * 0.004);
-  });
-  const rotateY = useTransform([sy, idle], ([s, d]: number[]) => s * 0.14 + d);
+    let m = metrics();
+    const size = () => {
+      m = metrics();
+      rootEl.style.setProperty("--cw", m.cw + "px");
+      rootEl.style.setProperty("--ch", m.ch + "px");
+    };
+    size();
+    addEventListener("resize", size);
 
-  const step = 360 / dim.n;
+    let shown = false;
+    const setShown = (v: boolean) => {
+      if (v === shown) return;
+      shown = v;
+      rootEl.style.visibility = v ? "visible" : "hidden";
+    };
+
+    const render = (s: number, idle: number) => {
+      const { vh, ch, R, dy, travel, s0, s1 } = m;
+      const p = (s - s0) / (s1 - s0);
+      if (p <= 0 || p >= 1) return setShown(false);
+      setShown(true);
+
+      const lead = vh / 2 + ch - p * travel; // y of the leading (top) card, relative to screen centre
+      const spin = p * 600 + idle * 5; // scroll-driven turn + a slow constant drift
+
+      for (let k = 0; k < n; k++) {
+        const el = els.current[k];
+        if (!el) continue;
+        const y = lead + k * dy;
+        const yn = y / (vh / 2);
+        const a = k * (360 / PER_TURN) + spin + (y / vh) * 80; // the last term twists the column
+        const c = Math.cos((a * Math.PI) / 180);
+        // fade with depth, and fade in only as a card clears the bottom edge (out at the top)
+        const edge = sstep(1.1, 0.7, yn) * sstep(-1.1, -0.7, yn);
+        const o = (0.14 + 0.86 * Math.pow(Math.max(0, c), 0.8)) * edge;
+        el.style.transform = `translate3d(0,${y.toFixed(1)}px,0) rotateY(${a.toFixed(2)}deg) translateZ(${R}px)`;
+        el.style.opacity = o.toFixed(3);
+      }
+    };
+
+    // One loop: exponential smoothing of the scroll position (frame-rate independent), no springs, no React.
+    let target = scrollY, cur = scrollY, idle = 0, last = performance.now(), raf = 0;
+    const onScroll = () => (target = scrollY);
+    addEventListener("scroll", onScroll, { passive: true });
+
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      cur = reduce ? target : cur + (target - cur) * (1 - Math.exp(-dt * 12));
+      if (Math.abs(target - cur) < 0.05) cur = target;
+      if (!reduce) idle += dt;
+      render(cur, idle);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      removeEventListener("scroll", onScroll);
+      removeEventListener("resize", size);
+    };
+  }, [n]);
 
   return (
-    <motion.div aria-hidden style={{ opacity, display, perspective: 1600 }} className="pointer-events-none fixed inset-0 z-[5] overflow-hidden">
-      <motion.div style={{ y, rotateY, rotateX: -8, transformStyle: "preserve-3d" }} className="absolute inset-0 will-change-transform">
-        {QUOTES.slice(0, dim.n).map((q, i) => (
-          <QuoteCard key={i} i={i} step={step} dim={dim} text={q} rotateY={rotateY} />
+    <div
+      ref={root}
+      aria-hidden
+      className="pointer-events-none fixed inset-0 z-[8] overflow-hidden"
+      style={{ visibility: "hidden", perspective: 1500 }}
+    >
+      <div className="absolute inset-0" style={{ transformStyle: "preserve-3d", transform: "rotateX(-6deg)" }}>
+        {QUOTES.slice(0, n).map((q, i) => (
+          <div
+            key={i}
+            ref={(el) => {
+              els.current[i] = el;
+            }}
+            className="absolute left-1/2 top-1/2 [backface-visibility:hidden] will-change-[transform,opacity]"
+            style={{
+              width: "var(--cw)",
+              height: "var(--ch)",
+              marginLeft: "calc(var(--cw) / -2)",
+              marginTop: "calc(var(--ch) / -2)",
+              opacity: 0,
+            }}
+          >
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-white/12 bg-neutral-900/85 p-4 text-white shadow-[0_18px_36px_-18px_rgba(0,0,0,0.85)] md:p-5">
+              <Quote size={14} className="text-orange-500" />
+              <p className="text-[14px] font-light leading-[1.45] text-neutral-100 md:text-[15px]">{q}</p>
+              <div className="flex items-center gap-2 text-[11px] text-neutral-500">
+                <span className="h-px w-5 bg-gradient-to-r from-orange-500 to-transparent" />
+                AlgoForge
+              </div>
+            </div>
+          </div>
         ))}
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

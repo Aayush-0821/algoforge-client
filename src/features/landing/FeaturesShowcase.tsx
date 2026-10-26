@@ -3,416 +3,329 @@
 import { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Inter } from "next/font/google";
-import { Braces, Check, Code2, Cpu, Database, GitBranch, Globe, Terminal, TrendingUp } from "lucide-react";
+import { Braces, Code2, Cpu, Database, GitBranch, Globe, MousePointer2, RefreshCw, Terminal, Zap } from "lucide-react";
 
-import { FEATURES } from "./features/features";
-
-
+/* Apple-style type: SF Pro on Apple devices, Inter everywhere else. */
 const inter = Inter({ subsets: ["latin"] });
 const SF = `-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", ${inter.style.fontFamily}, system-ui, sans-serif`;
 
 const ease = [0.22, 1, 0.36, 1] as const;
-const pad = (n: number) => String(n).padStart(2, "0");
 
-function Shell({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <div className="relative w-full max-w-[500px]">
-      <div aria-hidden className="absolute -inset-10 -z-10 bg-[radial-gradient(circle,rgba(249,115,22,0.10),transparent_62%)]" />
-      <div
-        className={`relative overflow-hidden rounded-[28px] border border-white/10 bg-[#0c0a09]/80 p-6 shadow-[0_40px_100px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl ${className}`}
-      >
-        <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        {children}
-      </div>
-    </div>
-  );
-}
+const grid = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+};
+const rise = {
+  hidden: { opacity: 0, y: 28 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease } },
+};
 
-function Pill({ label, value, delay = 0 }: { label: string; value: string; delay?: number }) {
+/* ───────────────────────── card shell ───────────────────────── */
+
+function Card({ className = "", children, hero = false }: { className?: string; children: ReactNode; hero?: boolean }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.6 }}
-      transition={{ duration: 0.6, delay, ease }}
-      className="flex items-center gap-4 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-[14px]"
+    <motion.article
+      variants={rise}
+      className={`group relative overflow-hidden transition-colors duration-300 ${
+        hero
+          ? "rounded-[28px] border border-orange-300/30 bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600"
+          : "rounded-[24px] border border-white/[0.07] bg-[#0d0c0b] hover:border-white/[0.16]"
+      } ${className}`}
     >
-      <span className="text-neutral-500">{label}</span>
-      <span className="h-4 w-px bg-white/10" />
-      <span className="text-neutral-100">{value}</span>
-    </motion.div>
+      {children}
+    </motion.article>
   );
 }
 
-function Mark({ className = "h-9 w-9" }: { className?: string }) {
+/** Title (+ optional description) pinned to the bottom-left, like the reference. */
+function Caption({ title, text, dark = false }: { title: string; text?: string; dark?: boolean }) {
   return (
-    <span className={`flex shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-orange-400 to-orange-600 text-white ${className}`}>
-      <Braces className="h-[55%] w-[55%]" />
-    </span>
-  );
-}
-
-function HabitsVisual() {
-  const levels = Array.from({ length: 84 }, (_, i) => {
-    const v = (i * 37 + 11) % 13;
-    return v < 4 ? 0 : v < 7 ? 1 : v < 9 ? 2 : v < 11 ? 3 : 4;
-  });
-  const tone = [
-    "bg-white/[0.06]",
-    "bg-orange-500/25",
-    "bg-orange-500/45",
-    "bg-orange-500/70",
-    "bg-orange-500",
-  ];
-  return (
-    <div className="flex w-full flex-col items-center gap-4">
-      <Shell>
-        <div className="flex items-center justify-between text-[13px]">
-          <span className="font-medium text-neutral-200">Solving activity</span>
-          <span className="text-neutral-500">Last 12 weeks</span>
-        </div>
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ staggerChildren: 0.01 }}
-          className="mt-5 grid grid-flow-col grid-rows-7 gap-1.5"
-        >
-          {levels.map((l, i) => (
-            <motion.span
-              key={i}
-              variants={{ hidden: { opacity: 0, scale: 0.5 }, show: { opacity: 1, scale: 1 } }}
-              transition={{ duration: 0.4, ease }}
-              className={`aspect-square rounded-[5px] ${tone[l]}`}
-            />
-          ))}
-        </motion.div>
-      </Shell>
-      <div className="flex flex-wrap justify-center gap-3">
-        <Pill label="Avg. solve time" value="18 min" />
-        <Pill label="Streak" value="12 days" delay={0.1} />
-      </div>
+    <div className="absolute inset-x-6 bottom-6">
+      <h3 className={`text-[19px] font-medium leading-tight tracking-[-0.02em] ${dark ? "text-black" : "text-white"}`}>{title}</h3>
+      {text && <p className={`mt-1.5 max-w-[250px] text-[13.5px] leading-5 ${dark ? "text-black/65" : "text-neutral-500"}`}>{text}</p>}
     </div>
   );
 }
 
-function WeakVisual() {
-  const topics: [string, number][] = [
-    ["Arrays", 92],
-    ["Hashing", 84],
-    ["Trees", 61],
-    ["Graphs", 44],
-    ["Dynamic programming", 38],
-  ];
+function Glow({ className = "" }: { className?: string }) {
+  return <div aria-hidden className={`pointer-events-none absolute rounded-full bg-orange-500/20 blur-3xl ${className}`} />;
+}
+
+/* ───────────────────────── 1 · hero card (the reference's lime card) ───────────────────────── */
+
+function RoadmapCard() {
   return (
-    <Shell>
-      <div className="flex items-center justify-between text-[13px]">
-        <span className="font-medium text-neutral-200">Topic strength</span>
-        <span className="text-neutral-500">2 need attention</span>
-      </div>
-      <div className="mt-6 space-y-5">
-        {topics.map(([name, v], i) => {
-          const weak = v < 50;
-          return (
-            <div key={name}>
-              <div className="flex items-center justify-between text-[14px]">
-                <span className="flex items-center gap-2.5 text-neutral-200">
-                  {name}
-                  {weak && (
-                    <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[11px] font-medium text-orange-400">
-                      Focus
-                    </span>
-                  )}
-                </span>
-                <span className="tabular-nums text-neutral-500">{v}%</span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-                <motion.div
-                  initial={{ width: 0 }}
-                  whileInView={{ width: `${v}%` }}
-                  viewport={{ once: true, amount: 0.8 }}
-                  transition={{ duration: 1, delay: i * 0.08, ease }}
-                  className={`h-full rounded-full ${weak ? "bg-orange-500" : "bg-white/35"}`}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </Shell>
+    <Card hero className="min-h-[240px] sm:col-span-2 lg:col-span-1 lg:col-start-1 lg:row-span-3 lg:row-start-1">
+      <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/25 blur-3xl" />
+      <Caption dark title="Personalized roadmap" text="A study plan built from the way you actually solve." />
+    </Card>
   );
 }
 
-function RoadmapVisual() {
-  const back = [
-    ["Week 4 · Graphs", 40],
-    ["Week 3 · Trees", 26],
-    ["Week 2 · Hashing", 13],
-  ] as const;
-  const steps: [string, "done" | "now" | "next"][] = [
-    ["Two pointers", "done"],
-    ["Sliding window", "done"],
-    ["Hash maps", "now"],
-    ["Binary search", "next"],
-  ];
+/* ───────────────────────── 2 · skill growth — rising line (reference: design iterations) ───────────────────────── */
+
+function GrowthCard() {
   return (
-    <div className="relative w-full max-w-[500px] pt-[72px]">
-      {back.map(([label, inset], k) => (
-        <div
-          key={label}
-          style={{ left: inset, right: inset, top: k * 24 }}
-          className="absolute h-14 rounded-t-2xl border border-b-0 border-white/10 bg-white/[0.035] px-4 pt-1.5 text-[11.5px] text-neutral-500"
-        >
-          {label}
-        </div>
-      ))}
-      <Shell className="!rounded-[24px]">
-        <div className="flex items-center justify-between text-[13px]">
-          <span className="font-medium text-neutral-200">Week 1 · Foundations</span>
-          <span className="text-neutral-500">2 / 4</span>
-        </div>
-        <ul className="mt-5 space-y-2.5">
-          {steps.map(([name, state], i) => (
-            <motion.li
-              key={name}
-              initial={{ opacity: 0, x: -12 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.8 }}
-              transition={{ duration: 0.6, delay: i * 0.09, ease }}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-[14px] ${
-                state === "now" ? "border border-orange-500/30 bg-orange-500/10" : "border border-white/[0.06] bg-white/[0.03]"
-              }`}
-            >
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                  state === "done"
-                    ? "bg-orange-500 text-black"
-                    : state === "now"
-                      ? "border border-orange-400"
-                      : "border border-white/20"
-                }`}
-              >
-                {state === "done" && <Check size={12} strokeWidth={3} />}
-                {state === "now" && <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />}
-              </span>
-              <span className={state === "next" ? "text-neutral-500" : "text-neutral-100"}>{name}</span>
-              {state === "now" && <span className="ml-auto text-[11px] text-orange-400">In progress</span>}
-            </motion.li>
-          ))}
-        </ul>
-      </Shell>
-    </div>
-  );
-}
+    <Card className="min-h-[300px] lg:col-start-1 lg:row-span-3 lg:row-start-4">
+      <Glow className="right-4 top-10 h-40 w-40" />
 
-/* ───────────────────────── 4 · AI recommendations — a short conversation ───────────────────────── */
+      {/* faint guides */}
+      <div aria-hidden className="absolute inset-x-6 top-[30%] h-px bg-white/[0.05]" />
+      <div aria-hidden className="absolute inset-x-6 top-[48%] h-px bg-white/[0.05]" />
+      <span className="absolute left-6 top-[27%] -translate-y-1/2 text-[11px] tabular-nums text-neutral-600">92</span>
 
-function CoachVisual() {
-  const msg = (delay: number) => ({
-    initial: { opacity: 0, y: 14 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, amount: 0.6 },
-    transition: { duration: 0.6, delay, ease },
-  });
-  return (
-    <Shell className="!p-0">
-      <div className="border-b border-white/10 bg-white/[0.03] px-5 py-3 text-[13px] text-neutral-400">
-        <span className="mr-1.5 text-neutral-600">#</span>coach
-      </div>
-      <div className="space-y-5 px-5 py-6">
-        <motion.div {...msg(0)} className="flex gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-[13px] font-semibold text-neutral-200">
-            Y
-          </span>
-          <div>
-            <p className="text-[14px] font-semibold text-neutral-100">
-              You <span className="ml-1 text-[11px] font-normal text-neutral-500">9:03 AM</span>
-            </p>
-            <p className="mt-0.5 text-[14px] leading-6 text-neutral-300">I keep getting stuck on sliding window problems.</p>
-          </div>
-        </motion.div>
-
-        <motion.div {...msg(0.15)} className="flex gap-3">
-          <Mark />
-          <div>
-            <p className="flex items-center gap-2 text-[14px] font-semibold text-neutral-100">
-              AlgoForge
-              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-neutral-400">AI</span>
-              <span className="text-[11px] font-normal text-neutral-500">9:03 AM</span>
-            </p>
-            <p className="mt-0.5 text-[14px] leading-6 text-neutral-300">
-              Your last three attempts broke when shrinking the window. Try <span className="font-semibold text-white">Longest Substring Without Repeating Characters</span> next, then
-              Minimum Window Substring.
-            </p>
-            <div className="mt-3 flex gap-2 text-[11.5px]">
-              <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-orange-300">Medium</span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-neutral-400">Sliding window</span>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </Shell>
-  );
-}
-
-
-function SyncVisual() {
-  const icons = [Code2, Terminal, Braces, GitBranch, Cpu, Database, Globe];
-  const nodes = icons.map((Icon, i) => {
-    const a = (Math.PI * (i + 0.5)) / icons.length; // spread across the upper half-circle
-    return { Icon, x: 50 - 44 * Math.cos(a), y: 76 - 62 * Math.sin(a), o: 0.55 + 0.45 * Math.sin(a) };
-  });
-  return (
-    <div className="relative mx-auto aspect-[5/4] w-full max-w-[500px]">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-        {nodes.map((n, i) => (
-          <motion.line
-            key={i}
-            x1={50}
-            y1={76}
-            x2={n.x}
-            y2={n.y}
-            stroke="rgba(249,115,22,0.35)"
-            strokeWidth="1"
-            vectorEffect="non-scaling-stroke"
-            strokeDasharray="3 5"
-            animate={{ strokeDashoffset: [0, -16] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
-          />
-        ))}
+      <svg viewBox="0 0 200 120" preserveAspectRatio="none" className="absolute inset-x-0 top-5 h-[58%] w-full" aria-hidden>
+        {/* where the line is heading */}
+        <path d="M150 34 C 168 26, 182 14, 200 4" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        <motion.path
+          d="M0 112 C 22 110, 34 104, 52 98 S 80 92, 96 80 S 128 58, 150 34"
+          fill="none"
+          stroke="#fb923c"
+          strokeWidth="3"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+          style={{ filter: "drop-shadow(0 0 8px rgba(249,115,22,0.7))" }}
+          initial={{ pathLength: 0 }}
+          whileInView={{ pathLength: 1 }}
+          viewport={{ once: true, amount: 0.6 }}
+          transition={{ duration: 1.6, ease }}
+        />
       </svg>
 
-      {nodes.map(({ Icon, x, y, o }, i) => (
-        <motion.span
-          key={i}
-          initial={{ opacity: 0, scale: 0.6 }}
-          whileInView={{ opacity: o, scale: 1 }}
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ duration: 0.6, delay: i * 0.07, ease }}
-          style={{ left: `${x}%`, top: `${y}%` }}
-          className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/12 bg-[#0c0a09]/90 text-neutral-300 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)]"
+      {/* the glowing point */}
+      <motion.span
+        initial={{ opacity: 0, scale: 0.4 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true, amount: 0.6 }}
+        transition={{ duration: 0.5, delay: 1.3, ease }}
+        style={{ left: "75%", top: "calc(20px + 58% * 0.283)" }}
+        className="absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-orange-500/25"
+      >
+        <span className="h-3 w-3 rounded-full bg-orange-500 shadow-[0_0_14px_rgba(249,115,22,0.9)]" />
+      </motion.span>
+
+      <Caption title="Skill growth" text="Watch your problem-solving level climb, week after week." />
+    </Card>
+  );
+}
+
+/* ───────────────────────── 3 · smart recommendations (reference: invite people) ───────────────────────── */
+
+function RecommendCard() {
+  const rings = [
+    { l: "E", ring: "ring-emerald-400", text: "text-emerald-300" },
+    { l: "M", ring: "ring-orange-500", text: "text-orange-300" },
+    { l: "H", ring: "ring-red-400", text: "text-red-300" },
+  ];
+  return (
+    <Card className="min-h-[200px] lg:col-start-2 lg:row-span-2 lg:row-start-1">
+      <Glow className="left-1/2 top-2 h-28 w-40 -translate-x-1/2" />
+      <div className="absolute left-1/2 top-8 flex -translate-x-1/2 items-center">
+        {rings.map((r, i) => (
+          <motion.span
+            key={r.l}
+            initial={{ opacity: 0, x: -16 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.8 }}
+            transition={{ duration: 0.6, delay: i * 0.1, ease }}
+            style={{ zIndex: 3 - i }}
+            className={`-ml-3 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-gradient-to-b from-[#26231f] to-[#14120f] text-[15px] font-semibold ring-[3px] ring-offset-[3px] ring-offset-[#0d0c0b] first:ml-0 ${r.ring} ${r.text}`}
+          >
+            {r.l}
+          </motion.span>
+        ))}
+        <MousePointer2 size={16} className="-ml-1 mt-9 fill-white text-white" />
+        <span className="-ml-1 mt-14 rounded-full bg-orange-400 px-3 py-1 text-[12px] font-semibold text-black">Two Sum II</span>
+      </div>
+      <Caption title="Smart recommendations" />
+    </Card>
+  );
+}
+
+/* ───────────────────────── 4 · instant feedback (reference: fast iterations) ───────────────────────── */
+
+function FeedbackCard() {
+  return (
+    <Card className="min-h-[220px] lg:col-start-2 lg:row-span-2 lg:row-start-3">
+      <div className="absolute inset-x-5 top-5">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.8 }}
+          transition={{ duration: 0.6, ease }}
+          className="flex w-[72%] items-center gap-3 rounded-2xl border border-white/[0.07] bg-[#161412] p-3"
         >
-          <Icon size={17} />
-        </motion.span>
-      ))}
-
-      <div className="absolute left-1/2 top-[76%] -translate-x-1/2 -translate-y-1/2">
-        <motion.span
-          className="absolute inset-0 rounded-full border border-orange-500/50"
-          animate={{ scale: [1, 2.2], opacity: [0.6, 0] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
-        />
-        <Mark className="relative h-16 w-16 !rounded-full shadow-[0_0_50px_rgba(249,115,22,0.45)]" />
-      </div>
-      <div className="absolute left-1/2 top-[92%] flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-[13px] text-neutral-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Synced just now
-      </div>
-    </div>
-  );
-}
-
-
-function ReadinessVisual() {
-  const C = 2 * Math.PI * 54;
-  return (
-    <div className="flex w-full flex-col items-center gap-3">
-      <Shell className="flex flex-col items-center !py-8">
-        <div className="relative h-[168px] w-[168px]">
-          <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
-            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7" />
-            <motion.circle
-              cx="60"
-              cy="60"
-              r="54"
-              fill="none"
-              stroke="#f97316"
-              strokeWidth="7"
-              strokeLinecap="round"
-              strokeDasharray={C}
-              initial={{ strokeDashoffset: C }}
-              whileInView={{ strokeDashoffset: C * 0.08 }}
-              viewport={{ once: true, amount: 0.6 }}
-              transition={{ duration: 1.6, ease }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[44px] font-semibold leading-none tracking-[-0.04em] text-white">92</span>
-            <span className="mt-1.5 text-[11px] uppercase tracking-[0.2em] text-neutral-500">Ready</span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black text-neutral-300">
+            <RefreshCw size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-[0.14em] text-neutral-500">
+              <span className="h-1 w-1 rounded-full bg-neutral-500" /> Analyzed
+            </p>
+            <span className="mt-1.5 block h-1.5 w-4/5 rounded-full bg-white/[0.08]" />
+            <span className="mt-1.5 block h-1.5 w-3/5 rounded-full bg-white/[0.06]" />
           </div>
-        </div>
-        <span className="mt-5 flex items-center gap-1.5 text-[13px] text-emerald-400">
-          <TrendingUp size={14} /> +6 this month
-        </span>
-      </Shell>
-      <Pill label="Strongest" value="Arrays" />
-      <Pill label="Focus next" value="Dynamic programming" delay={0.1} />
-    </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.8 }}
+          transition={{ duration: 0.6, delay: 0.15, ease }}
+          className="-mt-2 ml-auto flex w-[82%] items-center gap-3 rounded-2xl border border-white/10 bg-[#1d1a18] p-3 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.9)]"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black text-orange-400">
+            <Zap size={17} />
+          </span>
+          <div>
+            <p className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-orange-400">
+              <span className="h-1 w-1 rounded-full bg-orange-400" /> New
+            </p>
+            <p className="text-[14px] font-medium text-white">Slow loop found</p>
+            <p className="text-[11px] text-neutral-500">Today, 11:50</p>
+          </div>
+        </motion.div>
+      </div>
+      <Caption title="Instant feedback" />
+    </Card>
   );
 }
 
-const VISUALS = [CoachVisual, WeakVisual, RoadmapVisual, CoachVisual, SyncVisual, ReadinessVisual];
+/* ───────────────────────── 5 · your AI coach (reference: custom support) ───────────────────────── */
 
-function Row({ i }: { i: number }) {
-  const f = FEATURES[i];
-  const V = VISUALS[i % VISUALS.length];
-  const flip = i % 2 === 1;
-
+function CoachCard() {
   return (
-    <div className="grid items-center gap-12 py-16 md:py-24 lg:grid-cols-2 lg:gap-28">
+    <Card className="min-h-[200px] lg:col-start-2 lg:row-span-2 lg:row-start-5">
       <motion.div
-        initial={{ opacity: 0, y: 32 }}
+        initial={{ opacity: 0, y: 12 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 0.9, ease }}
-        className={flip ? "lg:order-2" : ""}
+        viewport={{ once: true, amount: 0.8 }}
+        transition={{ duration: 0.6, ease }}
+        className="absolute inset-x-5 top-6 flex items-center gap-3"
       >
-        
-        <h3 className="mt-6 max-w-[520px] text-balance text-[clamp(2.25rem,4.6vw,4rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-white">
-          {f.title}
-        </h3>
-        <p className="mt-6 max-w-[440px] text-[17px] leading-8 text-neutral-400">{f.description}</p>
+        <span className="relative shrink-0">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white">
+            <Braces size={20} />
+          </span>
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-400 text-[11px] font-bold text-black ring-2 ring-[#0d0c0b]">
+            1
+          </span>
+        </span>
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.05] px-4 py-2.5">
+          <p className="text-[10.5px] text-neutral-500">Forgey says:</p>
+          <p className="text-[12.5px] leading-[1.35] text-neutral-100">Your window breaks on shrink. Want a hint?</p>
+        </div>
       </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 40, scale: 0.97 }}
-        whileInView={{ opacity: 1, y: 0, scale: 1 }}
-        viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 1, delay: 0.1, ease }}
-        className={`flex justify-center ${flip ? "lg:order-1 lg:justify-start" : "lg:justify-end"}`}
-      >
-        <V />
-      </motion.div>
-    </div>
+      <Caption title="Your AI coach" />
+    </Card>
   );
 }
+
+/* ───────────────────────── 6 · track progress — bars (reference: track progress) ───────────────────────── */
+
+const BARS = [28, 52, 36, 64, 44, 78, 54, 92, 66, 100, 62, 84, 56, 72, 48];
+
+function ProgressCard() {
+  return (
+    <Card className="min-h-[300px] lg:col-start-3 lg:row-span-3 lg:row-start-1">
+      <div className="absolute -right-8 left-6 top-6 h-[52%] rounded-2xl border border-white/[0.08] bg-[#111010] p-4">
+        <p className="text-[13px] font-medium text-orange-400">Activity</p>
+        <div className="mt-3 flex h-[62%] items-end gap-[6px]">
+          {BARS.map((h, i) => (
+            <motion.span
+              key={i}
+              initial={{ scaleY: 0 }}
+              whileInView={{ scaleY: 1 }}
+              viewport={{ once: true, amount: 0.6 }}
+              transition={{ duration: 0.7, delay: i * 0.03, ease }}
+              style={{ height: `${h}%`, transformOrigin: "bottom", opacity: 0.45 + h / 190 }}
+              className="w-[7px] shrink-0 rounded-full bg-gradient-to-t from-orange-600 to-orange-300"
+            />
+          ))}
+        </div>
+        <div className="mt-2 flex justify-between pr-10 text-[10px] text-neutral-600">
+          <span>Mon</span>
+          <span>Wed</span>
+          <span>Today</span>
+        </div>
+      </div>
+      <Caption title="Track progress" text="Weak topics found before the interview finds them." />
+    </Card>
+  );
+}
+
+/* ───────────────────────── 7 · always in sync — icon circles (reference: 100% integrated) ───────────────────────── */
+
+function SyncCard() {
+  const Dot = ({ Icon, accent = false }: { Icon: typeof Code2; accent?: boolean }) => (
+    <span
+      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border ${
+        accent ? "border-orange-400/40 bg-orange-500 text-black" : "border-white/10 bg-[#161412] text-neutral-200"
+      }`}
+    >
+      <Icon size={21} />
+    </span>
+  );
+  return (
+    <Card className="min-h-[300px] lg:col-start-3 lg:row-span-3 lg:row-start-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true, amount: 0.6 }}
+        transition={{ duration: 0.8, ease }}
+        className="absolute inset-x-0 top-6 space-y-3.5"
+      >
+        <div className="flex justify-center gap-3.5">
+          <Dot Icon={Globe} />
+          <Dot Icon={Braces} accent />
+          <Dot Icon={GitBranch} />
+          <Dot Icon={Terminal} />
+          <Dot Icon={Cpu} />
+        </div>
+        <div className="flex translate-x-9 justify-center gap-3.5">
+          <Dot Icon={Code2} />
+          <Dot Icon={Database} />
+          <Dot Icon={Zap} />
+          <Dot Icon={Globe} />
+        </div>
+      </motion.div>
+      <Caption title="Always in sync" text="Install the extension once. Progress syncs as you solve." />
+    </Card>
+  );
+}
+
+/* ───────────────────────── section ───────────────────────── */
 
 export default function FeaturesShowcase() {
   return (
-    <section id="features" style={{ fontFamily: SF }} className="relative z-10 px-6 pb-16 pt-36 text-white md:pt-44">
-      <div className="mx-auto max-w-[1180px]">
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
+    <section id="features" style={{ fontFamily: SF }} className="relative z-10 px-4 pb-16 pt-32 text-white sm:px-6 md:pt-40">
+      <div className="mx-auto max-w-[1040px]">
+        <motion.h2
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ duration: 0.9, ease }}
-          className="text-center"
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.7, ease }}
+          className="text-center text-[clamp(1.9rem,3.6vw,3rem)] font-medium leading-[1.1] tracking-[-0.035em]"
         >
-          <span className="inline-flex items-center rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium tracking-wide text-neutral-300 backdrop-blur-xl">
-            Features
-          </span>
-          <h2 className="mt-6 text-[clamp(2.6rem,6.6vw,6rem)] font-semibold leading-[1] tracking-[-0.045em]">
-            <span className="block text-white">Everything you need</span>
-            <span className="block bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300 bg-clip-text text-transparent">
-              to prep smarter.
-            </span>
-          </h2>
-        </motion.div>
+          <span className="text-white">Everything you need </span>
+          <span className="bg-gradient-to-b from-white/65 to-white/25 bg-clip-text text-transparent">to prep smarter</span>
+        </motion.h2>
 
-        <div className="mt-8 md:mt-12">
-          {FEATURES.map((f, i) => (
-            <Row key={f.id} i={i} />
-          ))}
-        </div>
+        <motion.div
+          variants={grid}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.08 }}
+          className="mt-10 grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:mt-14 lg:grid-cols-3 lg:grid-rows-[repeat(6,104px)]"
+        >
+          <RoadmapCard />
+          <GrowthCard />
+          <RecommendCard />
+          <FeedbackCard />
+          <CoachCard />
+          <ProgressCard />
+          <SyncCard />
+        </motion.div>
       </div>
     </section>
   );
