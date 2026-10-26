@@ -1,21 +1,24 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { orbitTimeline } from "./CardOrbit";
 
 const N = 70000;
-const SCENE_VH = 2; 
 
 let seed = 7;
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const gauss = () => (rnd() + rnd() + rnd() - 1.5) / 1.5;
 const TAU = Math.PI * 2;
 
+// Binary tree layout (kept for kind 1, no longer in the scroll sequence)
 const TREE: [number, number][] = [];
 for (let l = 0; l < 4; l++) {
   for (let k = 0; k < 2 ** l; k++) TREE.push([((k + 0.5) / 2 ** l) * 3.8 - 1.9, 1.35 - l * 0.9]);
 }
 
 const rotX = (y: number, z: number, a: number): [number, number] => [y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a)];
+
+// 0 neural core · 1 algorithm tree (unused) · 2 browser grid (unused) · 3 orbiting nodes (unused) · 4 ingot (unused) · 5 uniform scatter
 function build(kind: number) {
   const a = new Float32Array(N * 3);
 
@@ -24,7 +27,7 @@ function build(kind: number) {
     const th = rnd() * TAU;
 
     if (kind === 0) {
-
+      // Neural Core: a spherical shell, denser inner neural clusters, and radial sparks.
       const mode = rnd();
       if (mode < 0.66) {
         const u = rnd() * 2 - 1;
@@ -95,6 +98,8 @@ function build(kind: number) {
       const k = 1 - 0.28 * ((y / h + 1) / 2); x *= k; z *= k;
       [y, z] = rotX(y, z, -0.45);
     } else {
+      // Uniform scatter: a wide, shallow slab that fills the viewport evenly. The shader
+      // widens it for ultrawide screens and thins it out for small ones.
       x = (rnd() * 2 - 1) * 4.8;
       y = (rnd() * 2 - 1) * 2.9;
       z = (rnd() * 2 - 1) * 1.1;
@@ -185,7 +190,7 @@ export default function ParticleField() {
       gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
       return b;
     };
-
+    // sequence: neural core (hero) -> uniform scatter (features) -> stays scattered for the rest of the page
     const shapes = [0, 5].map((k) => buf(build(k)));
     const seeds = buf(Float32Array.from({ length: N }, rnd));
     const attr = (name: string, b: WebGLBuffer, size: number) => {
@@ -204,9 +209,9 @@ export default function ParticleField() {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.clearColor(0.006, 0.005, 0.004, 1);
 
-    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       cv.width = Math.floor(window.innerWidth * dpr);
       cv.height = Math.floor(window.innerHeight * dpr);
       gl.viewport(0, 0, cv.width, cv.height);
@@ -214,28 +219,32 @@ export default function ParticleField() {
     resize();
     window.addEventListener("resize", resize);
 
-    let featuresTop = 0;
-    const measure = () => {
-      const vh = window.innerHeight, y = window.scrollY;
-      const feat = document.getElementById("features");
-      featuresTop = feat ? feat.getBoundingClientRect().top + y : vh * SCENE_VH;
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(document.body);
-    window.addEventListener("resize", measure);
-    window.addEventListener("load", measure);
-
     const mouse = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5, rx: window.innerWidth * 0.5, ry: window.innerHeight * 0.5 };
     const move = (e: PointerEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
     window.addEventListener("pointermove", move, { passive: true });
 
     let raf = 0, t0 = -1, lastY = window.scrollY, vel = 0;
+    // Adaptive load: if frames take too long, draw fewer particles (a uniform subset); restore when there is headroom.
+    let drawN = N, avg = 16.7, prevMs = 0;
     const frame = (ms: number) => {
       if (t0 < 0) t0 = ms;
-      const s = window.scrollY, vh = window.innerHeight;
-      const m = smooth(Math.max(0, featuresTop - vh * 0.9), featuresTop, s);
-      const seg = Math.min(1, Math.max(0, s / Math.max(1, featuresTop)));
+      const dtMs = prevMs ? Math.min(50, ms - prevMs) : 16.7;
+      prevMs = ms;
+      avg += (dtMs - avg) * 0.05;
+      if (!reduced) {
+        if (avg > 21 && drawN > N * 0.3) drawN = Math.max(N * 0.3, drawN * 0.97);
+        else if (avg < 15 && drawN < N) drawN = Math.min(N, drawN * 1.01);
+      }
+      const s = window.scrollY;
+
+      // core -> scatter starts the moment the quote orbit begins and is complete 70% of the way through it,
+      // so the cloud is fully scattered for the rest of the orbit and stays that way for the whole page
+      const { s0, s1 } = orbitTimeline();
+      const done = s0 + (s1 - s0) * 0.7;
+      const m = smooth(s0, done, s);
+      const seg = Math.min(1, Math.max(0, s / Math.max(1, done)));
+
+      // scroll angle: the core turns a little, the scatter stays flat
       const rot = 0.5 * seg * (1 - m);
       const calm = m;
 
@@ -255,17 +264,14 @@ export default function ParticleField() {
       gl.uniform1f(uCalm, calm);
       gl.uniform2f(uM, (mouse.rx / window.innerWidth) * 2 - 1, 1 - (mouse.ry / window.innerHeight) * 2);
       gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.drawArrays(gl.POINTS, 0, N);
+      gl.drawArrays(gl.POINTS, 0, Math.floor(drawN));
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
 
     return () => {
       cancelAnimationFrame(raf);
-      ro.disconnect();
       window.removeEventListener("resize", resize);
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("load", measure);
       window.removeEventListener("pointermove", move);
       shapes.forEach((b) => gl.deleteBuffer(b));
       gl.deleteBuffer(seeds);

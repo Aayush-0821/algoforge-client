@@ -7,7 +7,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowUpRight, Check, Play } from "lucide-react";
 
 import ParticleField from "./ParticleField";
-import CardOrbit from "./CardOrbit";
+import CardOrbit, { OrbitSpacer } from "./CardOrbit";
 import Footer from "./Footer";
 import FeaturesShowcase from "./FeaturesShowcase";
 import ExtensionShowcase from "./ExtensionShowcase";
@@ -16,6 +16,7 @@ import { navLinks } from "./navbar/nav-links";
 import { plans, comparisonFeatures, pricingFooter } from "./pricing/pricing-data";
 import { H1, P, Reveal, Rise, Scene, Words } from "./ScrollKit";
 
+/* ---------- Floating pill nav (theme toggle removed, spacing tightened) ---------- */
 function Nav() {
   return (
     <header className="fixed inset-x-0 top-5 z-50 flex justify-center px-4">
@@ -49,6 +50,26 @@ function Nav() {
   );
 }
 
+/* ---------- Hero fade: opacity/lift tied straight to scroll (no spring, no layout toggling) ---------- */
+const vhNow = () => (typeof window === "undefined" ? 900 : window.innerHeight);
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+function HeroFade({ children, className }: { children: ReactNode; className?: string }) {
+  const { scrollY } = useScroll();
+  const opacity = useTransform(scrollY, (v) => 1 - smooth(vhNow() * 0.05, vhNow() * 0.5, v));
+  const y = useTransform(scrollY, (v) => -Math.min(v, vhNow() * 0.6) * 0.18);
+  const pointerEvents = useTransform(opacity, (o) => (o < 0.05 ? "none" : "auto"));
+  return (
+    <motion.div style={{ opacity, y, pointerEvents, willChange: "opacity, transform" }} className={className}>
+      {children}
+    </motion.div>
+  );
+}
+
+/* ---------- Paper panel: always light now ---------- */
 function Panel({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start 20%"] });
@@ -67,6 +88,7 @@ function Panel({ children }: { children: ReactNode }) {
   );
 }
 
+/* ---------- Pricing: window-style cards on an ember sky (follows the pricing reference) ---------- */
 const sentence = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
 function includeRow(title: string, v: any) {
@@ -150,6 +172,7 @@ function Pricing() {
   return (
     <section id="pricing" className="px-4 pb-24 pt-28">
       <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-[linear-gradient(180deg,#ea580c_0%,#fb923c_28%,#fed7aa_58%,#f3f3f1_92%)] px-6 pb-16 pt-20 md:px-10 md:pt-24">
+        {/* soft clouds */}
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <div className="absolute -left-20 top-24 h-56 w-[28rem] rounded-full bg-white/50 blur-3xl" />
           <div className="absolute -right-24 top-40 h-64 w-[32rem] rounded-full bg-orange-100/60 blur-3xl" />
@@ -188,29 +211,16 @@ function Pricing() {
 }
 
 export default function LandingPage() {
-  const { scrollY } = useScroll();
-
-const heroOpacity = useTransform(
-  scrollY,
-  [0, 180, 480],
-  [1, 0.72, 0],
-);
-
-const heroY = useTransform(
-  scrollY,
-  [0, 480],
-  [0, -36],
-);
   return (
     <main className="relative bg-[#060504] text-white">
       <ParticleField />
       <CardOrbit />
       <Nav />
 
-      {/* 1 · Hero */}
+      {/* 1 · Hero — unchanged */}
       <Scene first>
-        
-        <div className="relative isolate flex-1 w-full overflow-visible">
+        <HeroFade className="relative isolate flex-1 w-full overflow-visible">
+          {/* Upper-left headline */}
           <div className="absolute left-0 top-[5%] z-10 max-w-[92vw] md:left-[2%] md:top-[7%] md:max-w-[min(760px,64vw)]">
             <h1 className={`${H1} text-left text-[clamp(3.25rem,7.8vw,7.5rem)]`}>
               <span className="block"><Words text="Stop Solving" /></span>
@@ -223,6 +233,8 @@ const heroY = useTransform(
               </span>
             </h1>
           </div>
+
+          {/* Lower-right product story and actions */}
           <Rise className="absolute bottom-[2%] right-0 z-10 flex w-full max-w-[440px] flex-col items-start gap-5 text-left sm:bottom-[4%] md:right-[2%] md:w-[38%] md:max-w-[460px]">
             <div className="flex flex-wrap gap-x-4 gap-y-2"></div>
             <p className={`${P} max-w-[420px] text-[14px] leading-7 text-neutral-300 md:text-[15px]`}>
@@ -242,8 +254,11 @@ const heroY = useTransform(
           </Rise>
 
           <div aria-hidden className="pointer-events-none absolute left-1/2 top-[48%] z-[1] hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 md:flex"></div>
-        </div>
+        </HeroFade>
       </Scene>
+
+      {/* Scroll room for the quote orbit; sizes itself so the features arrive the moment the last quote leaves */}
+      <OrbitSpacer />
 
       {/* 2 · Features */}
       <FeaturesShowcase />
